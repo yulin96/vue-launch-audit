@@ -1,0 +1,27 @@
+[
+  {
+    "correct": "BMW",
+    "wrong": ["BWM"],
+    "case_sensitive": true
+  },
+  {
+    "correct": "WeChat",
+    "wrong": ["Wechat", "weChat"],
+    "case_sensitive": true
+  },
+  {
+    "correct": "DingTalk",
+    "wrong": ["Dingtalk", "dingTalk"],
+    "case_sensitive": true
+  },
+  {
+    "correct": "GitHub",
+    "wrong": ["Github"],
+    "case_sensitive": true
+  },
+  {
+    "correct": "OpenAI",
+    "wrong": ["Open Ai", "openAI"],
+    "case_sensitive": true
+  }
+]
