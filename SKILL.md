@@ -59,6 +59,18 @@ Before inspecting files, define what "done" means for the current request. Use t
 
 Read `references/review-checklist.md` when you need a broader launch checklist.
 
+## Fix Mode
+
+Use fix mode when the user asks to repair issues, implement audit findings, or make a risky flow release-ready.
+
+- Start from the highest-severity user-facing issue, not from easy cleanup.
+- Trace the root cause through the actual route, request, state, and UI flow before editing.
+- Keep changes narrow and consistent with the project. Do not bundle unrelated refactors into a release fix.
+- Preserve existing working behavior unless it directly causes the bug.
+- After each fix, rerun the strongest realistic checks for the touched flow. If verification fails and the failure is in scope, keep investigating until the real cause is handled.
+- If a blocker depends on missing credentials, unavailable services, or product decisions, report the blocker clearly and include what was already verified.
+- Report fixes using `references/report-template.md` when a concise structure would help the user understand what changed.
+
 ## Term Scan
 
 Use the bundled scanner when wording or brand consistency matters.
@@ -72,10 +84,13 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
 ```
 
 - Add project-specific terms to `references/term-rules.json` or pass extra pairs with `--pair Correct=Wrong`.
+- The rules file supports fixed `wrong` terms and regex `patterns` for high-confidence Chinese wording or punctuation issues.
 - Treat scanner output as leads, not final truth. Confirm whether each hit is user-facing, test-only, or intentional.
 - Re-run the scan after making wording fixes.
 
 ## Output Shape
+
+Use `references/report-template.md` when a reusable review or fix report format would help.
 
 When the user asks for a review, structure the answer like this:
 

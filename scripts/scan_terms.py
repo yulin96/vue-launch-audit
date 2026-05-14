@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scan a repository for common wrong spellings of important terms.
+Scan a repository for common wrong spellings and text quality patterns.
 
 Exit codes:
 0 = no matches
@@ -60,6 +60,13 @@ class Rule:
     case_sensitive: bool = True
 
 
+@dataclass(frozen=True)
+class PatternRule:
+    pattern: str
+    suggestion: str
+    case_sensitive: bool = True
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scan text files for known wrong spellings.")
     parser.add_argument("--root", default=".", help="Repository root to scan.")
@@ -79,8 +86,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_rules(rules_path: str | None, pairs: list[str]) -> list[Rule]:
+def load_rules(rules_path: str | None, pairs: list[str]) -> tuple[list[Rule], list[PatternRule]]:
     rules: list[Rule] = []
+    pattern_rules: list[PatternRule] = []
 
     if rules_path:
         path = Path(rules_path)
@@ -98,19 +106,47 @@ def load_rules(rules_path: str | None, pairs: list[str]) -> list[Rule]:
 
             correct = item.get("correct")
             wrong_values = item.get("wrong")
+            pattern_values = item.get("patterns")
+            suggestion = item.get("suggestion", correct)
             case_sensitive = item.get("case_sensitive", True)
 
-            if not isinstance(correct, str) or not correct.strip():
-                raise ValueError("Each rule must include a non-empty 'correct' string.")
-            if not isinstance(wrong_values, list) or not wrong_values:
-                raise ValueError(f"Rule for {correct!r} must include a non-empty 'wrong' list.")
             if not isinstance(case_sensitive, bool):
                 raise ValueError(f"Rule for {correct!r} has non-boolean 'case_sensitive'.")
 
-            for wrong in wrong_values:
-                if not isinstance(wrong, str) or not wrong.strip():
-                    raise ValueError(f"Rule for {correct!r} includes an invalid wrong value.")
-                rules.append(Rule(correct=correct.strip(), wrong=wrong.strip(), case_sensitive=case_sensitive))
+            if wrong_values is not None:
+                if not isinstance(correct, str) or not correct.strip():
+                    raise ValueError("Rules with 'wrong' must include a non-empty 'correct' string.")
+                if not isinstance(wrong_values, list) or not wrong_values:
+                    raise ValueError(f"Rule for {correct!r} must include a non-empty 'wrong' list.")
+
+                for wrong in wrong_values:
+                    if not isinstance(wrong, str) or not wrong.strip():
+                        raise ValueError(f"Rule for {correct!r} includes an invalid wrong value.")
+                    rules.append(Rule(correct=correct.strip(), wrong=wrong.strip(), case_sensitive=case_sensitive))
+
+            if pattern_values is not None:
+                if not isinstance(suggestion, str) or not suggestion.strip():
+                    raise ValueError("Rules with 'patterns' must include 'suggestion' or 'correct'.")
+                if not isinstance(pattern_values, list) or not pattern_values:
+                    raise ValueError(f"Pattern rule for {suggestion!r} must include a non-empty 'patterns' list.")
+
+                for pattern in pattern_values:
+                    if not isinstance(pattern, str) or not pattern.strip():
+                        raise ValueError(f"Pattern rule for {suggestion!r} includes an invalid pattern.")
+                    try:
+                        re.compile(pattern)
+                    except re.error as exc:
+                        raise ValueError(f"Invalid regex pattern {pattern!r}: {exc}") from exc
+                    pattern_rules.append(
+                        PatternRule(
+                            pattern=pattern,
+                            suggestion=suggestion.strip(),
+                            case_sensitive=case_sensitive,
+                        )
+                    )
+
+            if wrong_values is None and pattern_values is None:
+                raise ValueError("Each rule must include 'wrong' or 'patterns'.")
 
     for pair in pairs:
         if "=" not in pair:
@@ -122,10 +158,10 @@ def load_rules(rules_path: str | None, pairs: list[str]) -> list[Rule]:
             raise ValueError(f"Invalid --pair value {pair!r}. Use Correct=Wrong.")
         rules.append(Rule(correct=correct, wrong=wrong, case_sensitive=True))
 
-    if not rules:
+    if not rules and not pattern_rules:
         raise ValueError("No rules loaded. Provide --rules, --pair, or both.")
 
-    return rules
+    return rules, pattern_rules
 
 
 def should_scan_file(path: Path, extensions: set[str]) -> bool:
@@ -133,7 +169,7 @@ def should_scan_file(path: Path, extensions: set[str]) -> bool:
 
 
 def build_pattern(term: str) -> str:
-    if re.fullmatch(r"[\w-]+", term):
+    if re.fullmatch(r"[A-Za-z0-9_-]+", term):
         return rf"(?<![\w-]){re.escape(term)}(?![\w-])"
     return re.escape(term)
 
@@ -146,7 +182,7 @@ def iter_files(root: Path, extensions: set[str]):
             yield path
 
 
-def scan_file(path: Path, rules: list[Rule]):
+def scan_file(path: Path, rules: list[Rule], pattern_rules: list[PatternRule]):
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except UnicodeDecodeError:
@@ -166,6 +202,18 @@ def scan_file(path: Path, rules: list[Rule]):
                         "correct": rule.correct,
                     }
                 )
+        for rule in pattern_rules:
+            flags = 0 if rule.case_sensitive else re.IGNORECASE
+            for match in re.finditer(rule.pattern, line, flags):
+                findings.append(
+                    {
+                        "path": path,
+                        "line": line_number,
+                        "column": match.start() + 1,
+                        "wrong": match.group(0),
+                        "correct": rule.suggestion,
+                    }
+                )
     return findings
 
 
@@ -182,7 +230,7 @@ def main() -> int:
         extensions.add(normalized.lower())
 
     try:
-        rules = load_rules(args.rules, args.pair)
+        rules, pattern_rules = load_rules(args.rules, args.pair)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -195,7 +243,7 @@ def main() -> int:
     for file_path in iter_files(root, extensions):
         if file_path.resolve() in ignored_paths:
             continue
-        findings.extend(scan_file(file_path, rules))
+        findings.extend(scan_file(file_path, rules, pattern_rules))
 
     if not findings:
         print(f"No term issues found under {root}")
