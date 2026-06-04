@@ -1,6 +1,6 @@
 ---
 name: vue-launch-audit
-description: Review Vue or Vite applications before release, especially mobile H5, campaign, or lightweight app projects. Use when Codex needs to inspect program logic, risky user flows, route/request/state interactions, release blockers, user-facing copy, and brand or product spelling mistakes.
+description: Review Vue applications before release, especially Vue projects built with Vite, mobile H5, campaign, or lightweight app projects. Use when Codex needs to inspect Vue program logic, risky user flows, route/request/state interactions, release blockers, user-facing copy, and brand or product spelling mistakes. Do not use this skill for non-Vue Vite projects.
 ---
 
 # Vue Launch Audit
@@ -19,7 +19,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 ## Audit Workflow
 
 1. Check the project shape and build safety.
-   Read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Before running a build, check whether scripts trigger deploy, upload, analytics, or other production side effects.
+   Confirm the project uses Vue, then read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Inspect build scripts for deploy, upload, analytics, or other production side effects, but do not run a build unless the user explicitly asks for it.
 2. Define the release surface.
    Identify the pages, routes, query parameters, SDKs, API calls, and runtime configuration that can affect the live build.
 3. Map the critical flows.
@@ -33,7 +33,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 7. Scan copy and terms.
    Run `scripts/scan_terms.py` with `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings.
 8. Verify before reporting.
-   Run the strongest realistic checks available for the repo. Prefer `pnpm type-check`, `pnpm lint`, and `pnpm build` when feasible. If the task includes UI fixes, open the app and walk the important flows.
+   Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted runtime checks when feasible. Only run a build when the user explicitly asks for it. If the task includes UI fixes, open the app and walk the important flows.
 9. Report findings by `P0`, `P1`, `P2`, and `P3`.
    Lead with concrete problems, file paths, impact, and how to reproduce. Keep summaries short. Call out what was verified versus what remains a risk hypothesis.
 

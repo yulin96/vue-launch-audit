@@ -36,7 +36,6 @@ TEXT_EXTENSIONS = {
     ".yml",
     ".yaml",
     ".svg",
-    ".env",
 }
 
 SKIP_DIRS = {
@@ -165,7 +164,8 @@ def load_rules(rules_path: str | None, pairs: list[str]) -> tuple[list[Rule], li
 
 
 def should_scan_file(path: Path, extensions: set[str]) -> bool:
-    return path.is_file() and path.suffix.lower() in extensions
+    is_env_file = path.name == ".env" or path.name.startswith(".env.")
+    return path.is_file() and (is_env_file or path.suffix.lower() in extensions)
 
 
 def build_pattern(term: str) -> str:

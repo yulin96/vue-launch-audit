@@ -45,12 +45,12 @@ Use this checklist when the project is close to release and you need extra cover
 
 ## 6. Release Readiness
 
-- Run available static checks such as type-check, lint, and build.
-- Inspect build scripts before running them so local verification does not accidentally upload or deploy.
+- Run available static checks such as type-check and lint.
+- Inspect build scripts for upload or deploy side effects, but do not run a build unless the user explicitly asks for it.
 - Inspect `.env*`, deploy scripts, and Vite config for environment drift.
 - Check whether prod-only flags disable functionality unexpectedly.
 - Review console errors, reporting hooks, and monitoring setup for obvious silent failures.
-- Treat a green build as necessary but not sufficient. Environment warnings, missing analytics IDs, and runtime config gaps still need to be called out.
+- When a build was explicitly requested and passes, do not treat that result as sufficient. Environment warnings, missing analytics IDs, and runtime config gaps still need to be called out.
 
 ## 7. Copy and Naming
 
