@@ -1,6 +1,6 @@
 # Vue Launch Audit Report Template
 
-Use these templates to keep release review and fix reports short, practical, and comparable across projects.
+Use this template to keep release review reports short, practical, and comparable across projects.
 
 ## Review Report
 
@@ -16,7 +16,7 @@ Start with the highest-risk findings. Omit empty severity sections unless the us
   - Impact: [what users or the release can lose]
   - Cause: [confirmed root cause]
   - Reproduce: [short path or condition]
-  - Recommendation: [direct fix]
+  - Recommendation: [direct recommended change]
 
 ### P1
 
@@ -57,26 +57,6 @@ Start with the highest-risk findings. Omit empty severity sections unless the us
 ```
 
 If no real launch issue is found, say that directly before listing verification and gaps.
-
-## Fix Report
-
-Use this when the user asked for fixes or when review findings were fixed in the same turn.
-
-```markdown
-## Fixed
-
-- [User-facing issue fixed]
-- [User-facing issue fixed]
-
-## Verified
-
-- [Command or flow] passed.
-- [Command or flow] passed.
-
-## Still Watch
-
-- [Residual risk or untested environment, only if meaningful]
-```
 
 ## Reporting Rules
 
