@@ -41,6 +41,14 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
   --pair CorrectName=WrongName
 ```
 
+如果要先扫一遍常见的状态和异步风险，例如新接口数据合并到旧对象、空 `catch`、watcher 反复触发请求或跳转，可以运行：
+
+```bash
+python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+```
+
+这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认。
+
 ## 工作方式
 
 这个 skill 会引导 Codex 先确定完成标准，再检查项目结构、构建脚本、入口、路由、关键页面、请求封装、状态管理和生产配置。检查时优先看真实用户会遇到的问题，而不是把普通优化建议包装成发布风险。默认只检查构建脚本，不执行完整打包，除非用户明确要求。
@@ -56,6 +64,7 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
 | `references/review-checklist.md` | 更完整的发布检查清单。当项目比较复杂，或者需要扩大检查范围时，Codex 可以打开这份清单补充检查点。 |
 | `references/term-rules.json` | 文案检查规则。里面维护“正确写法”和“常见错误写法”，供扫描脚本使用。 |
 | `scripts/scan_terms.py` | 文案扫描脚本。它会遍历项目里的常见文本文件，找出规则里列出的错误写法，并输出文件位置和建议改成什么。 |
+| `scripts/scan_vue_state_risks.py` | 状态和异步风险扫描脚本。它会找对象合并更新、字段级更新、空错误处理、未等待的请求、watcher 和路由跳转等需要人工确认的风险线索。 |
 | `.gitignore` | 忽略临时文件，例如 Python 缓存、系统缩略图等，避免它们被提交。 |
 | `README.md` | 给人看的说明文档，也就是当前文件。用于快速了解这个 skill 是做什么的、怎么用、每个文件有什么作用。 |
 
@@ -65,3 +74,4 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
 - 如果发布检查经验变多，但不是每次都必须读，放到 `references/review-checklist.md`。
 - 如果是每次使用都必须遵守的流程或汇报规则，放到 `SKILL.md`。
 - 改完 `scripts/scan_terms.py` 后，至少用一组规则实际跑一次，确认输出和退出码正常。
+- 改完 `scripts/scan_vue_state_risks.py` 后，至少在一个小样例或真实 Vue 项目里跑一次，确认它能输出风险线索且不会扫描 `node_modules`、`dist` 等目录。

@@ -26,15 +26,17 @@ Before inspecting files, define what "done" means for the current request. Use t
    Identify the paths a real user must complete: page entry, login/auth, route jumps, form submit, payment/upload/share, confirmation, and error recovery.
 4. Trace requests, routes, and state together.
    Follow the actual data path from page entry to request to UI result. Look for missing query params, wrong response-shape assumptions, async races, stale state, duplicate submissions, incorrect redirects, and UI success shown before backend confirmation.
-5. Review failure paths.
+5. Scan recent Codex-prone bug patterns.
+   Run `scripts/scan_vue_state_risks.py` when the audit includes state, async flow, page data, or user-visible stale information. Treat its output as leads that need manual confirmation. Prioritize cases where new API or route data is merged into an existing object, because stale fields from the previous user/page/item can stay visible. Prefer replacing the whole display data object when the response represents a new entity or page state; only keep field-level updates when the UI is intentionally editing one field.
+6. Review failure paths.
    Empty `catch` blocks, generic toasts, ignored business status codes, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
-6. Check release-specific risks.
+7. Check release-specific risks.
    Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, and third-party globals that may be absent.
-7. Scan copy and terms.
+8. Scan copy and terms.
    Run `scripts/scan_terms.py` with `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings.
-8. Verify before reporting.
+9. Verify before reporting.
    Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted runtime checks when feasible. Only run a build when the user explicitly asks for it. If the task includes UI fixes, open the app and walk the important flows.
-9. Report findings by `P0`, `P1`, `P2`, and `P3`.
+10. Report findings by `P0`, `P1`, `P2`, and `P3`.
    Lead with concrete problems, file paths, impact, and how to reproduce. Keep summaries short. Call out what was verified versus what remains a risk hypothesis.
 
 ## What to Prioritize
@@ -42,6 +44,9 @@ Before inspecting files, define what "done" means for the current request. Use t
 - Broken or misleading user flows over code style.
 - Logic that behaves differently on first load, refresh, back navigation, or slow network.
 - Places where request, route, and state interact.
+- State replacement mistakes where a new API result, selected item, or route entry is merged into old object data and can leave previous fields behind.
+- Callback-updated state that is not the same state read by the visible UI.
+- Watchers, route guards, or polling paths that can retrigger requests, redirects, timers, or refresh logic without a one-shot guard.
 - Silent failures, misleading success states, or failure handling that blocks retry.
 - User-facing text that can ship to production with the wrong name or spelling.
 - Production-only risk: missing env values, analytics hooks, third-party SDK setup, upload domains, share metadata, and 404/redirect behavior.
@@ -87,6 +92,22 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
 - The rules file supports fixed `wrong` terms and regex `patterns` for high-confidence Chinese wording or punctuation issues.
 - Treat scanner output as leads, not final truth. Confirm whether each hit is user-facing, test-only, or intentional.
 - Re-run the scan after making wording fixes.
+
+## State Risk Scan
+
+Use the bundled state scanner when the release risk may involve stale page data, async handoff, duplicated requests, or watcher-driven navigation.
+
+Example:
+
+```bash
+python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+```
+
+- Confirm every hit manually. The scanner finds code shapes that often hide launch bugs; it does not prove a bug by itself.
+- Start with hits in pages, stores, composables, request hooks, and route guards.
+- Pay special attention to `Object.assign(...)`, spread merges such as `{ ...oldData, ...newData }`, and `ref.value.xxx = ...` updates after fetching a new entity. These often mean old fields can remain visible when the new response omits them.
+- When a response represents a new page/entity/status, recommend whole-object replacement. Field-level mutation is only appropriate for deliberate partial edits, counters, local form typing, or known incremental updates.
+- Empty `catch` blocks, swallowed errors, and non-awaited async calls should be checked against the real user flow before being reported as confirmed launch issues.
 
 ## Output Shape
 

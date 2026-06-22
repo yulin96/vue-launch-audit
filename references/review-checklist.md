@@ -34,6 +34,11 @@ Use this checklist when the project is close to release and you need extra cover
 - Confirm state resets correctly when users leave and re-enter the page.
 - Check whether cached state can leak across accounts, sessions, or routes.
 - Check whether callback-updated state is the same state the visible UI reads. First-try-fails, second-try-works bugs often live here.
+- Check whether new API, route, or selected-item data is merged into an old object. If the screen is showing a new entity, whole-object replacement is usually safer than `Object.assign`, spread merge, or multiple field assignments.
+- Check whether missing fields in a response can leave previous values visible, especially names, status labels, images, QR codes, prices, counts, and permission flags.
+- Check whether async helpers actually resolve before timers, redirects, polling, or UI success states start.
+- Check one-shot guards around refresh logic, route guards, and `watchEffect`; repeated reactive triggers can look like page loops or repeated initialization.
+- For persisted stores, verify the first-load behavior with old localStorage values and with a clean session.
 
 ## 5. Mobile H5 Risks
 
