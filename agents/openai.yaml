@@ -1,4 +1,4 @@
 interface:
   display_name: "Vue Launch Audit"
-  short_description: "Vue launch review for bugs and wording issues"
-  default_prompt: "Use $vue-launch-audit to review this Vue project before release for logic bugs, risky behavior, and spelling mistakes."
+  short_description: "Vue launch review for release risks and wording issues"
+  default_prompt: "使用 $vue-launch-audit 帮我检查这个 Vue 项目上线前有没有路由、请求、状态、关键流程和文案风险，先不要改代码，也不要 build。"

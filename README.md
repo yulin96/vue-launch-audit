@@ -5,6 +5,7 @@
 ## 适合什么时候用
 
 - 发布前检查 Vue、使用 Vite 的 Vue 项目、移动 H5、活动页、轻量业务页。
+- 用户只说“检查一下”“上线前看一下”“发布前检查”“看看这个 H5 有没有风险”这类话时。
 - 排查用户流程是否能正常完成，比如进入页面、提交表单、分享、上传、支付、确认结果等。
 - 检查路由、请求、状态之间是否有隐藏问题。
 - 检查生产环境相关风险，比如环境变量、构建脚本、第三方 SDK、统计埋点、分享配置。
@@ -26,6 +27,16 @@
 
 如果只是想检查文案里的固定错误词，可以直接运行内置脚本：
 
+PowerShell：
+
+```powershell
+python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" `
+  --root . `
+  --rules "$env:CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+```
+
+Bash：
+
 ```bash
 python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
   --root . \
@@ -43,11 +54,15 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
 
 如果要先扫一遍常见的状态和异步风险，例如新接口数据合并到旧对象、空 `catch`、watcher 反复触发请求或跳转，可以运行：
 
+```powershell
+python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+```
+
 ```bash
 python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
 ```
 
-这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认。
+这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认。它发现线索时会返回退出码 `1`，这表示“需要检查”，不是脚本运行失败。
 
 ## 工作方式
 
@@ -70,7 +85,8 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --r
 
 ## 维护建议
 
-- 如果发现新的常见错词，优先加到 `references/term-rules.json`。
+- 如果发现跨项目都常见的错词，优先加到 `references/term-rules.json`。
+- 如果只是某个项目的品牌名或产品名，优先运行脚本时用 `--pair Correct=Wrong` 临时传入。
 - 如果发布检查经验变多，但不是每次都必须读，放到 `references/review-checklist.md`。
 - 如果是每次使用都必须遵守的流程或汇报规则，放到 `SKILL.md`。
 - 改完 `scripts/scan_terms.py` 后，至少用一组规则实际跑一次，确认输出和退出码正常。

@@ -1,0 +1,29 @@
+{
+  "skill_name": "vue-launch-audit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "使用 $vue-launch-audit 帮我检查一下这个 Vue H5 项目上线前有没有风险，先不要改代码，也不要 build。",
+      "expected_output": "应该进入审查模式，先说明检查范围；检查 package scripts、入口、路由、请求、状态和文案；不自动改代码，不执行 build；最终按风险等级汇报确认问题和未验证项。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "这个活动页首屏接口切换用户后偶尔显示上一个人的姓名，你用 $vue-launch-audit 看下是不是状态残留。",
+      "expected_output": "应该优先追踪页面入口、接口返回、状态更新和 UI 读取链路；运行或建议运行状态风险扫描；重点确认对象合并、字段级更新、watcher 重复触发等 stale state 问题；先给根因和影响，不直接扩大重构。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "用 $vue-launch-audit 帮我扫一下文案，有没有登录用词、品牌名大小写、重复标点这类上线前会丢脸的问题。",
+      "expected_output": "应该运行或建议运行 term scan；允许用 --pair 传入项目品牌词；把扫描结果当线索人工确认；只报告用户可见或发布相关文案问题。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "看看这个 Vite 项目发布前有没有问题，但它不是 Vue，是 React。",
+      "expected_output": "不应该使用 vue-launch-audit 作为主流程；应该说明该 skill 不适合非 Vue Vite 项目，并改用普通前端发布检查方式。",
+      "files": []
+    }
+  ]
+}

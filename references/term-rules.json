@@ -1,10 +1,5 @@
 [
   {
-    "correct": "BMW",
-    "wrong": ["BWM", "bmw"],
-    "case_sensitive": true
-  },
-  {
     "correct": "WeChat",
     "wrong": ["Wechat", "weChat", "WECHAT"],
     "case_sensitive": true
@@ -22,16 +17,6 @@
   {
     "correct": "Alipay",
     "wrong": ["AliPay", "alipay", "ALIPAY"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "GitHub",
-    "wrong": ["Github", "github", "GITHUB"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "OpenAI",
-    "wrong": ["Open Ai", "openAI", "OpenAi", "OPENAI"],
     "case_sensitive": true
   },
   {

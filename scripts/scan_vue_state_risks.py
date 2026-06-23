@@ -4,7 +4,7 @@ Scan Vue projects for code shapes that often hide stale state or async-flow bugs
 
 Exit codes:
 0 = no matches
-1 = one or more matches found
+1 = one or more review leads found
 2 = invalid usage
 """
 
@@ -46,6 +46,7 @@ class Finding:
     path: Path
     line: int
     column: int
+    severity: str
     code: str
     message: str
     snippet: str
@@ -54,6 +55,7 @@ class Finding:
 @dataclass(frozen=True)
 class LineRule:
     code: str
+    severity: str
     pattern: re.Pattern[str]
     message: str
 
@@ -61,31 +63,37 @@ class LineRule:
 LINE_RULES = [
     LineRule(
         code="STATE_MERGE_OBJECT_ASSIGN",
+        severity="HIGH",
         pattern=re.compile(r"\bObject\.assign\s*\("),
         message="对象合并更新，确认是否应该整体替换，避免保留上一次数据里的旧字段。",
     ),
     LineRule(
         code="STATE_MERGE_SPREAD",
+        severity="HIGH",
         pattern=re.compile(r"=\s*\{[^}\n]*\.\.\.[^}\n]+,\s*\.\.\.[^}\n]+\}"),
         message="对象 spread 合并更新，确认新数据是否可能缺字段并残留旧信息。",
     ),
     LineRule(
         code="STATE_FIELD_MUTATION_AFTER_ASYNC",
+        severity="LEAD",
         pattern=re.compile(r"\b\w+\.value\.[\w$]+\s*="),
         message="ref 对象字段级更新，确认这里不是在写入一个新的页面/接口实体。",
     ),
     LineRule(
         code="ASYNC_NOT_AWAITED",
+        severity="LEAD",
         pattern=re.compile(r"(?<!await\s)(?<!return\s)\b(?:api|post|get|fetch|request)[\w$]*\s*\("),
         message="请求或异步调用没有 await/return，确认后续 UI、跳转或计时不依赖它完成。",
     ),
     LineRule(
         code="WATCH_SIDE_EFFECT",
+        severity="LEAD",
         pattern=re.compile(r"\bwatch(?:Effect)?\s*\("),
         message="watch/watchEffect 入口，检查内部是否会重复触发请求、跳转、计时或刷新。",
     ),
     LineRule(
         code="ROUTE_GUARD_SIDE_EFFECT",
+        severity="LEAD",
         pattern=re.compile(r"\brouter\.(?:push|replace)\s*\("),
         message="路由跳转，确认它不会被初始化、watcher 或接口回调重复触发。",
     ),
@@ -128,6 +136,7 @@ def find_empty_catches(path: Path, text: str) -> list[Finding]:
                 path=path,
                 line=line,
                 column=column,
+                severity="HIGH",
                 code="EMPTY_CATCH",
                 message="空 catch 会吞掉真实失败，确认用户是否能看到失败原因并重试。",
                 snippet=snippet,
@@ -155,6 +164,7 @@ def scan_file(path: Path) -> list[Finding]:
                         path=path,
                         line=line_number,
                         column=match.start() + 1,
+                        severity=rule.severity,
                         code=rule.code,
                         message=rule.message,
                         snippet=stripped,
@@ -185,10 +195,12 @@ def main() -> int:
 
     for item in findings:
         rel_path = item.path.relative_to(root)
-        print(f"{rel_path}:{item.line}:{item.column} [{item.code}] {item.message}")
+        print(f"{rel_path}:{item.line}:{item.column} [{item.severity}] [{item.code}] {item.message}")
         print(f"  {item.snippet}")
 
-    print(f"\nFound {len(findings)} possible Vue state/async risk pattern(s).")
+    high_count = sum(1 for item in findings if item.severity == "HIGH")
+    lead_count = len(findings) - high_count
+    print(f"\nFound {len(findings)} Vue state/async review lead(s): {high_count} high, {lead_count} lead.")
     return 1
 
 

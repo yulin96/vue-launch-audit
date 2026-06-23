@@ -1,6 +1,6 @@
 ---
 name: vue-launch-audit
-description: Review Vue applications before release, especially Vue projects built with Vite, mobile H5, campaign, or lightweight app projects. Use when Codex needs to inspect Vue program logic, risky user flows, route/request/state interactions, release blockers, user-facing copy, and brand or product spelling mistakes. Do not use this skill for non-Vue Vite projects.
+description: Review Vue applications before release, especially Vue projects built with Vite, mobile H5, campaign, or lightweight app projects. Use when Codex needs to inspect Vue program logic, risky user flows, route/request/state interactions, release blockers, user-facing copy, and brand or product spelling mistakes. Also use for Chinese requests like "检查一下", "上线前看一下", "发布前检查", "看看这个 H5/Vue 项目有没有风险", or "帮我扫一下路由/请求/状态/文案问题". Do not use this skill for non-Vue Vite projects.
 ---
 
 # Vue Launch Audit
@@ -11,6 +11,7 @@ Audit launch-bound Vue projects for user-impacting problems, not style trivia. S
 
 Before inspecting files, define what "done" means for the current request. Use that standard to decide when to stop.
 
+- If the user says only "检查一下", "看一下", or similar short Chinese review wording, treat it as an audit request. Inspect and report first; do not edit code unless the user asks for fixes.
 - For a review request, finish with confirmed release risks, verification results, and any untested gaps. Do not report speculative style cleanup as a launch issue.
 - If the user asks to fix an issue, first finish the audit-level diagnosis: root cause, affected flow, and recommended change. Only edit code if the user explicitly asks for implementation after that.
 - If something fails during verification, investigate far enough to identify the likely root cause and user impact. Do not silently convert a review into a patching session.
@@ -78,7 +79,15 @@ Use browser verification only after the user approves it. Code reading and light
 
 Use the bundled scanner when wording or brand consistency matters.
 
-Example:
+PowerShell example:
+
+```powershell
+python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" `
+  --root . `
+  --rules "$env:CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+```
+
+Bash example:
 
 ```bash
 python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
@@ -86,7 +95,7 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
   --rules "$CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
 ```
 
-- Add project-specific terms to `references/term-rules.json` or pass extra pairs with `--pair Correct=Wrong`.
+- Prefer passing project-specific brand or product names with `--pair Correct=Wrong`. Add them to `references/term-rules.json` only when they are useful across many Vue release reviews.
 - The rules file supports fixed `wrong` terms and regex `patterns` for high-confidence Chinese wording or punctuation issues.
 - Treat scanner output as leads, not final truth. Confirm whether each hit is user-facing, test-only, or intentional.
 - Re-run the scan after making wording fixes.
@@ -97,11 +106,17 @@ Use the bundled state scanner when the release risk may involve stale page data,
 
 Example:
 
+```powershell
+python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+```
+
 ```bash
 python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
 ```
 
 - Confirm every hit manually. The scanner finds code shapes that often hide launch bugs; it does not prove a bug by itself.
+- The scanner exits with code `1` when it finds review leads. Treat that as "needs inspection", not as a command failure.
+- Check `[HIGH]` hits first. They are more likely to affect user-visible state or failure handling. `[LEAD]` hits are context clues that may be harmless.
 - Start with hits in pages, stores, composables, request hooks, and route guards.
 - Pay special attention to `Object.assign(...)`, spread merges such as `{ ...oldData, ...newData }`, and `ref.value.xxx = ...` updates after fetching a new entity. These often mean old fields can remain visible when the new response omits them.
 - When a response represents a new page/entity/status, recommend whole-object replacement. Field-level mutation is only appropriate for deliberate partial edits, counters, local form typing, or known incremental updates.
