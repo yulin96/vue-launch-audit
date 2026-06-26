@@ -20,23 +20,23 @@ Before inspecting files, define what "done" means for the current request. Use t
 ## Audit Workflow
 
 1. Check the project shape and build safety.
-   Confirm the project uses Vue, then read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Inspect build scripts for deploy, upload, analytics, or other production side effects, but do not run a build unless the user explicitly asks for it.
+   Confirm the project uses Vue, then read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Inspect build scripts for deploy, upload, analytics, or other production side effects before choosing verification commands. Do not run a build unless the user explicitly asks for it.
 2. Define the release surface.
-   Identify the pages, routes, query parameters, SDKs, API calls, and runtime configuration that can affect the live build.
+   Identify the pages, routes, query parameters, persisted keys, SDKs, API calls, and runtime configuration that can affect the live build.
 3. Map the critical flows.
    Identify the paths a real user must complete: page entry, login/auth, route jumps, form submit, payment/upload/share, confirmation, and error recovery.
 4. Trace requests, routes, and state together.
-   Follow the actual data path from page entry to request to UI result. Look for missing query params, wrong response-shape assumptions, async races, stale state, duplicate submissions, incorrect redirects, and UI success shown before backend confirmation.
+   Follow the actual data path from page entry to request to UI result. Start from the real startup chain (`index.html`/`main.ts`/init config/router guards) before diving into leaf components. Look for missing query params, wrong response-shape assumptions, async races, stale state, duplicate submissions, incorrect redirects, and UI success shown before backend confirmation.
 5. Scan recent Codex-prone bug patterns.
    Run `scripts/scan_vue_state_risks.py` when the audit includes state, async flow, page data, or user-visible stale information. Treat its output as leads that need manual confirmation. Prioritize cases where new API or route data is merged into an existing object, because stale fields from the previous user/page/item can stay visible. Prefer replacing the whole display data object when the response represents a new entity or page state; only keep field-level updates when the UI is intentionally editing one field.
 6. Review failure paths.
-   Empty `catch` blocks, generic toasts, ignored business status codes, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
+   Empty `catch` blocks, generic toasts, ignored business status codes, promise branches that never `return`/`resolve`/`reject`, locks that are not released, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
 7. Check release-specific risks.
-   Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, and third-party globals that may be absent.
+   Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, frontend-exposed secrets, deploy/upload scripts, and third-party globals or dynamically loaded scripts that may be absent.
 8. Scan copy and terms.
    Run `scripts/scan_terms.py` with `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings.
 9. Verify before reporting.
-   Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted code or script checks when feasible. Only run a build or browser check when the user explicitly approves it. When a risk depends on real page behavior, report that browser verification is recommended and wait for approval before opening the app.
+   Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted code or script checks when feasible, but check the repo's actual scripts and tool versions first because ESLint 9 and custom config files may need different commands. Only run a build or browser check when the user explicitly approves it. When a risk depends on real page behavior, report that browser verification is recommended and wait for approval before opening the app.
 10. Report findings by `P0`, `P1`, `P2`, and `P3`.
    Lead with concrete problems, file paths, impact, and how to reproduce. Keep summaries short. Call out what was verified versus what remains a risk hypothesis.
 
@@ -45,10 +45,12 @@ Before inspecting files, define what "done" means for the current request. Use t
 - Broken or misleading user flows over code style.
 - Logic that behaves differently on first load, refresh, back navigation, or slow network.
 - Places where request, route, and state interact.
+- Entry parameters, share links, hash routes, and persisted storage keys that decide first-load behavior.
 - State replacement mistakes where a new API result, selected item, or route entry is merged into old object data and can leave previous fields behind.
 - Callback-updated state that is not the same state read by the visible UI.
 - Watchers, route guards, or polling paths that can retrigger requests, redirects, timers, or refresh logic without a one-shot guard.
-- Silent failures, misleading success states, or failure handling that blocks retry.
+- Silent failures, misleading success states, request locks that stay locked, or failure handling that blocks retry.
+- Runtime identity and session partitioning, especially URL `id`/`appid` values, store persistence keys, and clean-session versus old-localStorage behavior.
 - User-facing text that can ship to production with the wrong name or spelling.
 - Production-only risk: missing env values, analytics hooks, third-party SDK setup, upload domains, share metadata, and 404/redirect behavior.
 - High-confidence root causes over broad refactors. Recommend the smallest change that would remove the confirmed risk, but do not implement it during a pure audit.
@@ -60,6 +62,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 - `src/stores`, composables, and watchers for stale or duplicated state transitions.
 - `src/utils/request*` and submit hooks for retries, duplicate actions, failure messages, and data shape mismatches.
 - `src/plugins` and startup code for SDK bootstrapping, rem adaptation, analytics, and global side effects.
+- `index.html`, public runtime config, and dynamically injected scripts for globals that source code assumes are present.
 - `.env*`, `vite.config.*`, and deploy scripts for release-only drift.
 - `config*`, `constants*`, generated route maps, and runtime config files that can disagree with source routes or deployed URLs.
 
