@@ -22,7 +22,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 1. Check the project shape and build safety.
    Confirm the project uses Vue, then read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Inspect build scripts for deploy, upload, analytics, or other production side effects before choosing verification commands. Do not run a build unless the user explicitly asks for it.
 2. Define the release surface.
-   Identify the pages, routes, query parameters, persisted keys, SDKs, API calls, and runtime configuration that can affect the live build.
+   Identify the pages, routes, query parameters, persisted keys, SDKs, API calls, runtime configuration, heavy assets, and rendering engines that can affect the live build.
 3. Map the critical flows.
    Identify the paths a real user must complete: page entry, login/auth, route jumps, form submit, payment/upload/share, confirmation, and error recovery.
 4. Trace requests, routes, and state together.
@@ -32,7 +32,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 6. Review failure paths.
    Empty `catch` blocks, generic toasts, ignored business status codes, promise branches that never `return`/`resolve`/`reject`, locks that are not released, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
 7. Check release-specific risks.
-   Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, frontend-exposed secrets, deploy/upload scripts, and third-party globals or dynamically loaded scripts that may be absent.
+   Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, frontend-exposed secrets, deploy/upload scripts, and third-party globals or dynamically loaded scripts that may be absent. For asset-heavy or 3D pages, inspect dependencies, model/image sizes, browser targets, preload paths, and first-load/rendering cost before giving performance or hardware conclusions.
 8. Scan copy and terms.
    Run `scripts/scan_terms.py` with `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings.
 9. Verify before reporting.
@@ -46,12 +46,18 @@ Before inspecting files, define what "done" means for the current request. Use t
 - Logic that behaves differently on first load, refresh, back navigation, or slow network.
 - Places where request, route, and state interact.
 - Entry parameters, share links, hash routes, and persisted storage keys that decide first-load behavior.
+- `App.vue` route shells, `router-view` keys, `Transition`, and `keep-alive` identity. If the URL changes but the page looks stuck, check component reuse and cache identity before removing animation or cache behavior the app needs.
 - State replacement mistakes where a new API result, selected item, or route entry is merged into old object data and can leave previous fields behind.
 - Callback-updated state that is not the same state read by the visible UI.
 - Watchers, route guards, or polling paths that can retrigger requests, redirects, timers, or refresh logic without a one-shot guard.
 - Silent failures, misleading success states, request locks that stay locked, or failure handling that blocks retry.
 - Runtime identity and session partitioning, especially URL `id`/`appid` values, store persistence keys, and clean-session versus old-localStorage behavior.
+- Layout/bootstrap problems that come from global rem, viewport, preview-mode, or container-size gates. Check the central sizing setup before treating the visible component as the root cause.
+- Animation or focus utilities that run but appear invisible. Confirm the exact DOM node being selected is the visible shell, not an inner transparent wrapper.
+- Preload/resource identity mismatches, especially raw HTML-injected URLs versus runtime asset URLs. Encoded characters such as `%40` and `@` can defeat browser reuse even when the file is the same.
+- Temporary local-test switches that bypass startup work. If 3D, SDK, or loading code is skipped, verify the overlay/loading state is derived from the same switch so the test UI can actually appear.
 - User-facing text that can ship to production with the wrong name or spelling.
+- User-facing messages produced through toast/modal libraries. Passing the wrong shape can render raw objects such as `[object Object]`, so verify visible output, not only the function call.
 - Production-only risk: missing env values, analytics hooks, third-party SDK setup, upload domains, share metadata, and 404/redirect behavior.
 - High-confidence root causes over broad refactors. Recommend the smallest change that would remove the confirmed risk, but do not implement it during a pure audit.
 
@@ -62,9 +68,11 @@ Before inspecting files, define what "done" means for the current request. Use t
 - `src/stores`, composables, and watchers for stale or duplicated state transitions.
 - `src/utils/request*` and submit hooks for retries, duplicate actions, failure messages, and data shape mismatches.
 - `src/plugins` and startup code for SDK bootstrapping, rem adaptation, analytics, and global side effects.
+- `src/App.vue` route shells, `router-view` wrappers, `Transition`, `keep-alive`, global click/haptic handlers, and startup/loading overlays.
 - `index.html`, public runtime config, and dynamically injected scripts for globals that source code assumes are present.
 - `.env*`, `vite.config.*`, and deploy scripts for release-only drift.
 - `config*`, `constants*`, generated route maps, and runtime config files that can disagree with source routes or deployed URLs.
+- Heavy runtime assets such as `.glb`, `.gltf`, high-density images, video, sprite sheets, and generated preload manifests.
 
 Read `references/review-checklist.md` when you need a broader launch checklist.
 

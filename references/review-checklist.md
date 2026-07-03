@@ -8,6 +8,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Trace the real startup chain before page-level debugging: `index.html`, runtime config, app init, router guards, stores, then pages.
 - Confirm the default route, 404 route, redirects, and route guards do not trap users or skip required state.
 - Verify query parameters and hash routing survive refresh, deep links, and back navigation.
+- Check `App.vue` route-shell behavior: `router-view` keys, `Transition`, `keep-alive`, global click handlers, and page wrappers. URL changes with stale content often come from component/cache identity, not from the target page.
 - Treat required entry parameters as release-critical. Check what happens on a clean open, a shared link, refresh, and a missing or malformed query value.
 - Compare generated share links with the page logic that decides inside/outside, invited/direct, or campaign branches. Do not review share config and entry-page branch checks separately.
 - Confirm fallback route names actually exist and do not redirect users into a blank page.
@@ -20,6 +21,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Verify forms cannot be submitted twice and buttons do not stay disabled forever after failure.
 - Check whether the UI waits for backend confirmation before showing success, jumping pages, updating counts, or clearing user input.
 - For scan, share, upload, print, payment, and SDK-backed actions, check that failure paths release locks and do not make a no-op look successful.
+- For local-test or debug switches that skip startup work, confirm the same switch also updates loading overlays, opacity gates, timers, and disabled states. Skipping the expensive function alone may still leave the page blocked.
 
 ## 3. Requests and Data
 
@@ -30,6 +32,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Search for empty `catch` blocks and swallowed errors in user actions. A silent failure is usually a launch issue, not a cleanup task.
 - Verify request locking or duplicate-submit helpers release correctly on both success and failure.
 - Check async wrappers that create their own `Promise`: every business branch should finish with the intended `return`, `resolve`, `reject`, or reset behavior.
+- Check toast/modal calls with real rendered copy in mind. Some libraries render raw option objects as `[object Object]` when the message/options argument shape is wrong.
 
 ## 4. State and Reactivity
 
@@ -52,6 +55,9 @@ Use this checklist when the project is close to release and you need extra cover
 - Verify share metadata, analytics, and monitoring hooks do not crash when SDK globals are absent.
 - Check module-level SDK locks, especially scan/share/payment locks, because config failure before the SDK callback can leave the lock stuck.
 - Confirm rem scaling or viewport helpers do not break page structure on wider preview screens.
+- For mobile/PC preview gates, do not rely on width alone. Check touch/hover/pointer capability when phone landscape can exceed the desktop-preview threshold.
+- For visual effects or canvases tied to a container, verify initialization waits until the container has a real `getBoundingClientRect()` size, and check whether an existing `resize()` / `destroy()` lifecycle already exists before adding a new refresh path.
+- When an animation or focus helper appears to do nothing, inspect the selected DOM element and visible wrapper. The animated node may be an inner transparent element while the visible border/background is on its parent.
 - Split iOS and Android behavior early when deep links, downloads, share, or external app jumps behave differently.
 
 ## 6. Release Readiness
@@ -64,6 +70,8 @@ Use this checklist when the project is close to release and you need extra cover
 - Check whether prod-only flags disable functionality unexpectedly.
 - Review console errors, reporting hooks, and monitoring setup for obvious silent failures.
 - Check public runtime config and dynamically loaded third-party scripts. If source calls optional globals, confirm the user-visible behavior when the script fails to load.
+- For preload/resource manifests, compare the exact runtime URL strings in the deployed HTML with the URLs requested by components and CSS. Encoded forms like `%40` versus `@` can cause duplicate loads.
+- For 3D, video, high-DPI image, or large-screen Vue pages, inspect `package.json`, the main render component, `vite.config.*`, browser targets, and top asset sizes before making performance, compatibility, or hardware-readiness conclusions.
 - When a build was explicitly requested and passes, do not treat that result as sufficient. Environment warnings, missing analytics IDs, and runtime config gaps still need to be called out.
 
 ## 7. Copy and Naming
