@@ -52,7 +52,7 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
   --pair CorrectName=WrongName
 ```
 
-如果要先扫一遍常见的状态和异步风险，例如新接口数据合并到旧对象、空 `catch`、watcher 反复触发请求或跳转，可以运行：
+如果要先扫一遍常见的状态和异步风险，例如新接口数据合并到旧对象、空 `catch`、锁没有恢复、手写 `Promise` 分支没闭合、toast 参数形态可疑、动态脚本加载、watcher 反复触发请求或跳转，可以运行：
 
 ```powershell
 python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
@@ -62,7 +62,7 @@ python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py"
 python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
 ```
 
-这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认。它发现线索时会返回退出码 `1`，这表示“需要检查”，不是脚本运行失败。
+这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认，尤其是锁、toast、动态脚本和 storage 这类可能有正常用法的代码形态。它发现线索时会返回退出码 `1`，这表示“需要检查”，不是脚本运行失败。
 
 ## 工作方式
 

@@ -24,6 +24,48 @@
       "prompt": "看看这个 Vite 项目发布前有没有问题，但它不是 Vue，是 React。",
       "expected_output": "不应该使用 vue-launch-audit 作为主流程；应该说明该 skill 不适合非 Vue Vite 项目，并改用普通前端发布检查方式。",
       "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "用 $vue-launch-audit 检查一下这个活动页，入口链接有 ?inside 和普通链接两种，最近有人反馈分享进来分支不对。不要改代码。",
+      "expected_output": "应该先追踪分享链接生成、入口页分支判断、路由参数、hash/query 保留和持久化 key；把配置和页面判断放在一起比对；不直接修复，不 build；报告确认问题和需要浏览器验证的分支。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "这个扫码按钮偶尔点完就没反应，怀疑 wx 配置失败后 scanLock 没恢复。用 $vue-launch-audit 看下。",
+      "expected_output": "应该优先检查 SDK 初始化、scanLock 或模块级锁、成功/失败/取消/配置失败分支、按钮 loading/disabled 恢复；可以运行状态风险扫描，但必须人工确认用户流程后再报告。",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "检查一下这个项目的打印功能，代码里动态加载了 public 下面的打印脚本，按钮调用 window.printsd_NEW?.(...)，不要打开浏览器。",
+      "expected_output": "应该检查动态脚本注入、加载失败分支、可选全局调用是否把失败伪装成成功、入口初始化顺序和用户提示；不打开浏览器，只在报告里说明如果要确认需批准浏览器验证。",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "这个 Vue 页面 URL 已经变了但内容还是旧页面，去掉 keep-alive 和 transition 好像就好了，但我需要保留这两个。用 $vue-launch-audit 分析。",
+      "expected_output": "应该先检查 App.vue route shell、router-view key、Transition、keep-alive 缓存身份和全局 DOM/click 插件；不能建议直接删除 keep-alive/transition；需要说明 route.fullPath 和 route.name 这类 key 选择的影响。",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "帮我扫一下上线风险，这个仓库 vite.config 里有 OSS/FTP 上传插件，package scripts 里也有 deploy。不要执行 build。",
+      "expected_output": "应该先检查 package scripts、vite 配置和上传/部署副作用；明确不运行 build；把 deploy/upload 配置、前端暴露密钥、环境变量漂移作为发布风险检查点。",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "表单提交失败后按钮一直 loading，代码里有 new Promise 包了一层 SDK 回调。用 $vue-launch-audit 找原因。",
+      "expected_output": "应该检查 Promise 所有业务分支是否 resolve/reject/return，loading/submitting/lock 是否在成功、失败、取消、异常分支恢复；报告根因和用户影响，不把 scanner 命中直接当结论。",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "这个项目用了 vue-sonner，有用户反馈 toast 显示 [object Object]，你用 $vue-launch-audit 看下类似问题。",
+      "expected_output": "应该检查 toast/modal 首参和 options 参数形态，确认具体库的调用约定，搜索用户可见提示，不把所有对象参数都硬报为 bug；最终指出真实可见风险。",
+      "files": []
     }
   ]
 }

@@ -28,7 +28,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 4. Trace requests, routes, and state together.
    Follow the actual data path from page entry to request to UI result. Start from the real startup chain (`index.html`/`main.ts`/init config/router guards) before diving into leaf components. Look for missing query params, wrong response-shape assumptions, async races, stale state, duplicate submissions, incorrect redirects, and UI success shown before backend confirmation.
 5. Scan recent Codex-prone bug patterns.
-   Run `scripts/scan_vue_state_risks.py` when the audit includes state, async flow, page data, or user-visible stale information. Treat its output as leads that need manual confirmation. Prioritize cases where new API or route data is merged into an existing object, because stale fields from the previous user/page/item can stay visible. Prefer replacing the whole display data object when the response represents a new entity or page state; only keep field-level updates when the UI is intentionally editing one field.
+   Run `scripts/scan_vue_state_risks.py` when the audit includes state, async flow, page data, storage, SDK actions, dynamic scripts, toasts, or user-visible stale information. Treat its output as leads that need manual confirmation. Prioritize cases where new API or route data is merged into an existing object, because stale fields from the previous user/page/item can stay visible. Prefer replacing the whole display data object when the response represents a new entity or page state; only keep field-level updates when the UI is intentionally editing one field.
 6. Review failure paths.
    Empty `catch` blocks, generic toasts, ignored business status codes, promise branches that never `return`/`resolve`/`reject`, locks that are not released, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
 7. Check release-specific risks.
@@ -58,6 +58,8 @@ Before inspecting files, define what "done" means for the current request. Use t
 - Temporary local-test switches that bypass startup work. If 3D, SDK, or loading code is skipped, verify the overlay/loading state is derived from the same switch so the test UI can actually appear.
 - User-facing text that can ship to production with the wrong name or spelling.
 - User-facing messages produced through toast/modal libraries. Passing the wrong shape can render raw objects such as `[object Object]`, so verify visible output, not only the function call.
+- Request locks and SDK locks that are set before config, permission, or callback success is guaranteed. Check cancel, timeout, config failure, and thrown-error branches, not only the SDK `complete` callback.
+- Hand-written `new Promise(...)` wrappers around SDKs, timers, uploads, or print/share flows. Every branch should deliberately finish or reset state; missing closure often looks like a stuck button or no-op.
 - Production-only risk: missing env values, analytics hooks, third-party SDK setup, upload domains, share metadata, and 404/redirect behavior.
 - High-confidence root causes over broad refactors. Recommend the smallest change that would remove the confirmed risk, but do not implement it during a pure audit.
 
@@ -72,6 +74,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 - `index.html`, public runtime config, and dynamically injected scripts for globals that source code assumes are present.
 - `.env*`, `vite.config.*`, and deploy scripts for release-only drift.
 - `config*`, `constants*`, generated route maps, and runtime config files that can disagree with source routes or deployed URLs.
+- Direct `localStorage` / `sessionStorage` reads and persisted-store setup, especially when the app can be entered by different activity IDs, tenants, languages, inside/outside modes, or share links.
 - Heavy runtime assets such as `.glb`, `.gltf`, high-density images, video, sprite sheets, and generated preload manifests.
 
 Read `references/review-checklist.md` when you need a broader launch checklist.
@@ -132,6 +135,7 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --r
 - Pay special attention to `Object.assign(...)`, spread merges such as `{ ...oldData, ...newData }`, and `ref.value.xxx = ...` updates after fetching a new entity. These often mean old fields can remain visible when the new response omits them.
 - When a response represents a new page/entity/status, recommend whole-object replacement. Field-level mutation is only appropriate for deliberate partial edits, counters, local form typing, or known incremental updates.
 - Empty `catch` blocks, swallowed errors, and non-awaited async calls should be checked against the real user flow before being reported as confirmed launch issues.
+- `PROMISE_BRANCH_CLOSURE`, `LOCK_SET_TRUE`, `TOAST_OBJECT_PAYLOAD`, `DYNAMIC_SCRIPT_LOAD`, and `DIRECT_STORAGE_ACCESS` are common false-positive shapes. Use them to choose what to read next; report them only when the affected user flow can really get stuck, mislead users, or leak state.
 
 ## Output Shape
 

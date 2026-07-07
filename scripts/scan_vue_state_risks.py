@@ -97,6 +97,36 @@ LINE_RULES = [
         pattern=re.compile(r"\brouter\.(?:push|replace)\s*\("),
         message="路由跳转，确认它不会被初始化、watcher 或接口回调重复触发。",
     ),
+    LineRule(
+        code="PROMISE_BRANCH_CLOSURE",
+        severity="LEAD",
+        pattern=re.compile(r"\bnew\s+Promise\s*\("),
+        message="手写 Promise 包装，确认所有业务分支都会 return/resolve/reject，并释放 loading 或 lock。",
+    ),
+    LineRule(
+        code="LOCK_SET_TRUE",
+        severity="HIGH",
+        pattern=re.compile(r"\b\w*(?:lock|Lock|locked|Locked|loading|Loading|submitting|Submitting)\w*\s*=\s*true\b"),
+        message="锁或 loading 被置为 true，确认成功、失败、取消、SDK 配置失败分支都会恢复。",
+    ),
+    LineRule(
+        code="TOAST_OBJECT_PAYLOAD",
+        severity="LEAD",
+        pattern=re.compile(r"\b(?:toast\.\w+|Toast|showToast|showFailToast|showSuccessToast)\s*\(\s*\{"),
+        message="toast/modal 首参是对象，确认当前库是否会把对象渲染成 [object Object] 或丢失 message。",
+    ),
+    LineRule(
+        code="DYNAMIC_SCRIPT_LOAD",
+        severity="LEAD",
+        pattern=re.compile(r"\bcreateElement\s*\(\s*['\"]script['\"]\s*\)|\.appendChild\s*\(\s*\w*script", re.IGNORECASE),
+        message="动态脚本加载，确认加载失败时用户动作不会表现为成功或无响应。",
+    ),
+    LineRule(
+        code="DIRECT_STORAGE_ACCESS",
+        severity="LEAD",
+        pattern=re.compile(r"\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\s*\("),
+        message="直接读写浏览器存储，确认 key 包含必要的用户、活动、语言或渠道身份。",
+    ),
 ]
 
 

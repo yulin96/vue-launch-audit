@@ -21,6 +21,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Verify forms cannot be submitted twice and buttons do not stay disabled forever after failure.
 - Check whether the UI waits for backend confirmation before showing success, jumping pages, updating counts, or clearing user input.
 - For scan, share, upload, print, payment, and SDK-backed actions, check that failure paths release locks and do not make a no-op look successful.
+- If an SDK action sets a lock before configuration or permission succeeds, check config failure, permission denial, cancel, timeout, thrown error, and callback branches separately.
 - For local-test or debug switches that skip startup work, confirm the same switch also updates loading overlays, opacity gates, timers, and disabled states. Skipping the expensive function alone may still leave the page blocked.
 
 ## 3. Requests and Data
@@ -32,6 +33,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Search for empty `catch` blocks and swallowed errors in user actions. A silent failure is usually a launch issue, not a cleanup task.
 - Verify request locking or duplicate-submit helpers release correctly on both success and failure.
 - Check async wrappers that create their own `Promise`: every business branch should finish with the intended `return`, `resolve`, `reject`, or reset behavior.
+- In `new Promise(...)` wrappers around SDKs or callbacks, missing `reject`/`resolve` is not the only issue. Also check whether the caller starts loading, disables a button, starts polling, or redirects before the wrapper has really finished.
 - Check toast/modal calls with real rendered copy in mind. Some libraries render raw option objects as `[object Object]` when the message/options argument shape is wrong.
 
 ## 4. State and Reactivity
@@ -41,6 +43,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Confirm state resets correctly when users leave and re-enter the page.
 - Check whether cached state can leak across accounts, sessions, or routes.
 - Check persisted-store keys against runtime identity values such as URL `id`, `appID`, tenant, campaign, inside/outside mode, or language. Missing identity can collapse separate sessions into one stored bucket.
+- Check direct `localStorage` and `sessionStorage` usage outside the store layer. These keys often bypass the normal tenant/activity/session partitioning.
 - Check whether callback-updated state is the same state the visible UI reads. First-try-fails, second-try-works bugs often live here.
 - Check whether new API, route, or selected-item data is merged into an old object. If the screen is showing a new entity, whole-object replacement is usually safer than `Object.assign`, spread merge, or multiple field assignments.
 - Check whether missing fields in a response can leave previous values visible, especially names, status labels, images, QR codes, prices, counts, and permission flags.
@@ -70,6 +73,7 @@ Use this checklist when the project is close to release and you need extra cover
 - Check whether prod-only flags disable functionality unexpectedly.
 - Review console errors, reporting hooks, and monitoring setup for obvious silent failures.
 - Check public runtime config and dynamically loaded third-party scripts. If source calls optional globals, confirm the user-visible behavior when the script fails to load.
+- For dynamically loaded print, share, map, analytics, or SDK scripts, inspect both the injection code and every call site. Optional chaining can hide the failure and make a click look successful while nothing happens.
 - For preload/resource manifests, compare the exact runtime URL strings in the deployed HTML with the URLs requested by components and CSS. Encoded forms like `%40` versus `@` can cause duplicate loads.
 - For 3D, video, high-DPI image, or large-screen Vue pages, inspect `package.json`, the main render component, `vite.config.*`, browser targets, and top asset sizes before making performance, compatibility, or hardware-readiness conclusions.
 - When a build was explicitly requested and passes, do not treat that result as sufficient. Environment warnings, missing analytics IDs, and runtime config gaps still need to be called out.
