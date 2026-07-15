@@ -30,39 +30,46 @@
 PowerShell：
 
 ```powershell
-python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" `
+$skillDir = "<当前 SKILL.md 所在目录的绝对路径>"
+python "$skillDir/scripts/scan_terms.py" `
   --root . `
-  --rules "$env:CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+  --rules "$skillDir/references/term-rules.json"
 ```
 
 Bash：
 
 ```bash
-python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
+skill_dir="<当前 SKILL.md 所在目录的绝对路径>"
+python "$skill_dir/scripts/scan_terms.py" \
   --root . \
-  --rules "$CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+  --rules "$skill_dir/references/term-rules.json"
 ```
 
 也可以临时追加一组词：
 
 ```bash
-python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
+skill_dir="<当前 SKILL.md 所在目录的绝对路径>"
+python "$skill_dir/scripts/scan_terms.py" \
   --root . \
-  --rules "$CODEX_HOME/skills/vue-launch-audit/references/term-rules.json" \
+  --rules "$skill_dir/references/term-rules.json" \
   --pair CorrectName=WrongName
 ```
+
+默认规则只保留高置信度错词。如果项目采用内置品牌名、术语和标点风格，可以额外追加 `--rules "$skill_dir/references/term-style-rules.json"`；不确认项目规范时不要加载这组风格规则。
 
 如果要先扫一遍常见的状态和异步风险，例如新接口数据合并到旧对象、空 `catch`、锁没有恢复、手写 `Promise` 分支没闭合、toast 参数形态可疑、动态脚本加载、watcher 反复触发请求或跳转，可以运行：
 
 ```powershell
-python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+$skillDir = "<当前 SKILL.md 所在目录的绝对路径>"
+python "$skillDir/scripts/scan_vue_state_risks.py" --root .
 ```
 
 ```bash
-python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+skill_dir="<当前 SKILL.md 所在目录的绝对路径>"
+python "$skill_dir/scripts/scan_vue_state_risks.py" --root .
 ```
 
-这个脚本只负责找线索，不能直接等同于 bug。命中的地方需要结合页面流程确认，尤其是锁、toast、动态脚本和 storage 这类可能有正常用法的代码形态。它发现线索时会返回退出码 `1`，这表示“需要检查”，不是脚本运行失败。
+这个脚本只负责找线索，不能直接等同于 bug。`REVIEW_FIRST` 和 `LEAD` 只表示检查顺序，不是真实严重度。命中的地方需要结合页面流程确认，尤其是对象合并、锁、toast、动态脚本和 storage 这类可能有正常用法的代码形态。它发现线索时会返回退出码 `1`，这表示“需要检查”，不是脚本运行失败。
 
 ## 工作方式
 
@@ -77,15 +84,16 @@ python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --r
 | `SKILL.md` | skill 的主说明文件。它告诉 Codex 什么时候触发这个 skill，以及发布检查应该按什么流程做、优先看什么、最后怎么汇报。 |
 | `agents/openai.yaml` | 给界面展示用的简短信息，包括显示名称、简短描述和默认提示语。 |
 | `references/review-checklist.md` | 更完整的发布检查清单。当项目比较复杂，或者需要扩大检查范围时，Codex 可以打开这份清单补充检查点。 |
-| `references/term-rules.json` | 文案检查规则。里面维护“正确写法”和“常见错误写法”，供扫描脚本使用。 |
+| `references/term-rules.json` | 默认文案规则，只维护跨项目适用的高置信度错词。 |
+| `references/term-style-rules.json` | 可选风格规则，只有确认项目采用对应品牌、术语、标点和空格规范时才加载。 |
 | `scripts/scan_terms.py` | 文案扫描脚本。它会遍历项目里的常见文本文件，找出规则里列出的错误写法，并输出文件位置和建议改成什么。 |
-| `scripts/scan_vue_state_risks.py` | 状态和异步风险扫描脚本。它会找对象合并更新、字段级更新、空错误处理、未等待的请求、watcher 和路由跳转等需要人工确认的风险线索。 |
+| `scripts/scan_vue_state_risks.py` | 状态和异步风险扫描脚本。它会找对象合并更新、字段级更新、空错误处理、锁、watcher 和路由跳转等需要人工确认的风险线索。 |
 | `.gitignore` | 忽略临时文件，例如 Python 缓存、系统缩略图等，避免它们被提交。 |
 | `README.md` | 给人看的说明文档，也就是当前文件。用于快速了解这个 skill 是做什么的、怎么用、每个文件有什么作用。 |
 
 ## 维护建议
 
-- 如果发现跨项目都常见的错词，优先加到 `references/term-rules.json`。
+- 如果发现跨项目都明确错误的错词，优先加到 `references/term-rules.json`；存在产品或地区差异的写法放到可选风格规则或项目自己的规则文件。
 - 如果只是某个项目的品牌名或产品名，优先运行脚本时用 `--pair Correct=Wrong` 临时传入。
 - 如果发布检查经验变多，但不是每次都必须读，放到 `references/review-checklist.md`。
 - 如果是每次使用都必须遵守的流程或汇报规则，放到 `SKILL.md`。

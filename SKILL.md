@@ -13,7 +13,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 
 - If the user says only "检查一下", "看一下", or similar short Chinese review wording, treat it as an audit request. Inspect and report first; do not edit code unless the user asks for fixes.
 - For a review request, finish with confirmed release risks, verification results, and any untested gaps. Do not report speculative style cleanup as a launch issue.
-- If the user asks to fix an issue, first finish the audit-level diagnosis: root cause, affected flow, and recommended change. Only edit code if the user explicitly asks for implementation after that.
+- If the user explicitly asks to fix or implement, diagnose the root cause and affected flow first, then make the scoped change without requiring a second confirmation. Ask before editing only when the necessary change would expand beyond the requested scope.
 - If something fails during verification, investigate far enough to identify the likely root cause and user impact. Do not silently convert a review into a patching session.
 - Keep the final response direct and practical: what was checked, what was confirmed, and what still needs attention.
 
@@ -34,7 +34,7 @@ Before inspecting files, define what "done" means for the current request. Use t
 7. Check release-specific risks.
    Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, frontend-exposed secrets, deploy/upload scripts, and third-party globals or dynamically loaded scripts that may be absent. For asset-heavy or 3D pages, inspect dependencies, model/image sizes, browser targets, preload paths, and first-load/rendering cost before giving performance or hardware conclusions.
 8. Scan copy and terms.
-   Run `scripts/scan_terms.py` with `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings.
+   Run `scripts/scan_terms.py` with the high-confidence `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings. Add `references/term-style-rules.json` only when its terminology and typography conventions match the project.
 9. Verify before reporting.
    Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted code or script checks when feasible, but check the repo's actual scripts and tool versions first because ESLint 9 and custom config files may need different commands. Only run a build or browser check when the user explicitly approves it. When a risk depends on real page behavior, report that browser verification is recommended and wait for approval before opening the app.
 10. Report findings by `P0`, `P1`, `P2`, and `P3`.
@@ -93,24 +93,29 @@ Use browser verification only after the user approves it. Code reading and light
 
 Use the bundled scanner when wording or brand consistency matters.
 
+Resolve all bundled resource paths relative to this `SKILL.md`. Do not assume the skill is installed under `$CODEX_HOME/skills`.
+
 PowerShell example:
 
 ```powershell
-python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" `
+$skillDir = "<absolute directory containing this SKILL.md>"
+python "$skillDir/scripts/scan_terms.py" `
   --root . `
-  --rules "$env:CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+  --rules "$skillDir/references/term-rules.json"
 ```
 
 Bash example:
 
 ```bash
-python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_terms.py" \
+skill_dir="<absolute directory containing this SKILL.md>"
+python "$skill_dir/scripts/scan_terms.py" \
   --root . \
-  --rules "$CODEX_HOME/skills/vue-launch-audit/references/term-rules.json"
+  --rules "$skill_dir/references/term-rules.json"
 ```
 
-- Prefer passing project-specific brand or product names with `--pair Correct=Wrong`. Add them to `references/term-rules.json` only when they are useful across many Vue release reviews.
-- The rules file supports fixed `wrong` terms and regex `patterns` for high-confidence Chinese wording or punctuation issues.
+- Pass project-specific brand or product names with `--pair Correct=Wrong`. If a convention is reusable but not universally correct, add it to the optional `references/term-style-rules.json`, not the baseline rules.
+- Keep `references/term-rules.json` limited to high-confidence mistakes. Pass the optional `references/term-style-rules.json` as a second `--rules` argument only after confirming that its brand, terminology, punctuation, and spacing conventions apply to the project.
+- The scanner accepts repeated `--rules` arguments and supports fixed `wrong` terms plus regex `patterns`.
 - Treat scanner output as leads, not final truth. Confirm whether each hit is user-facing, test-only, or intentional.
 - Re-run the scan after making wording fixes.
 
@@ -121,21 +126,23 @@ Use the bundled state scanner when the release risk may involve stale page data,
 Example:
 
 ```powershell
-python "$env:CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+$skillDir = "<absolute directory containing this SKILL.md>"
+python "$skillDir/scripts/scan_vue_state_risks.py" --root .
 ```
 
 ```bash
-python "$CODEX_HOME/skills/vue-launch-audit/scripts/scan_vue_state_risks.py" --root .
+skill_dir="<absolute directory containing this SKILL.md>"
+python "$skill_dir/scripts/scan_vue_state_risks.py" --root .
 ```
 
 - Confirm every hit manually. The scanner finds code shapes that often hide launch bugs; it does not prove a bug by itself.
 - The scanner exits with code `1` when it finds review leads. Treat that as "needs inspection", not as a command failure.
-- Check `[HIGH]` hits first. They are more likely to affect user-visible state or failure handling. `[LEAD]` hits are context clues that may be harmless.
+- Check `[REVIEW_FIRST]` hits before `[LEAD]` hits. These labels control review order only; they are not finding severity or proof of a bug. Assign `P0`-`P3` only after tracing the affected user flow.
 - Start with hits in pages, stores, composables, request hooks, and route guards.
 - Pay special attention to `Object.assign(...)`, spread merges such as `{ ...oldData, ...newData }`, and `ref.value.xxx = ...` updates after fetching a new entity. These often mean old fields can remain visible when the new response omits them.
 - When a response represents a new page/entity/status, recommend whole-object replacement. Field-level mutation is only appropriate for deliberate partial edits, counters, local form typing, or known incremental updates.
 - Empty `catch` blocks, swallowed errors, and non-awaited async calls should be checked against the real user flow before being reported as confirmed launch issues.
-- `PROMISE_BRANCH_CLOSURE`, `LOCK_SET_TRUE`, `TOAST_OBJECT_PAYLOAD`, `DYNAMIC_SCRIPT_LOAD`, and `DIRECT_STORAGE_ACCESS` are common false-positive shapes. Use them to choose what to read next; report them only when the affected user flow can really get stuck, mislead users, or leak state.
+- `STATE_MERGE_OBJECT_ASSIGN`, `STATE_MERGE_SPREAD`, `PROMISE_BRANCH_CLOSURE`, `LOCK_SET_TRUE`, `TOAST_OBJECT_PAYLOAD`, `DYNAMIC_SCRIPT_LOAD`, and `DIRECT_STORAGE_ACCESS` are review leads, not confirmed findings. Use them to choose what to read next; report them only when the affected user flow can really get stuck, mislead users, or leak state.
 
 ## Output Shape
 
@@ -155,4 +162,4 @@ When the user asks for a review, structure the answer like this:
 
 If no real issues are found, say so directly and list any testing gaps that still remain.
 
-When the user asks for implementation instead of a pure review, pause after the audit diagnosis and confirm the intended change scope before editing unless the request was already explicit.
+When the user explicitly asks for implementation, diagnose first and then edit within the stated scope. Pause only when the required change would materially expand that scope.

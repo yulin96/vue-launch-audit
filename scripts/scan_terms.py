@@ -69,7 +69,12 @@ class PatternRule:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scan text files for known wrong spellings.")
     parser.add_argument("--root", default=".", help="Repository root to scan.")
-    parser.add_argument("--rules", help="Path to a JSON rules file.")
+    parser.add_argument(
+        "--rules",
+        action="append",
+        default=[],
+        help="Path to a JSON rules file. Repeat to combine baseline and project style rules.",
+    )
     parser.add_argument(
         "--pair",
         action="append",
@@ -85,11 +90,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_rules(rules_path: str | None, pairs: list[str]) -> tuple[list[Rule], list[PatternRule]]:
+def load_rules(rules_paths: list[str], pairs: list[str]) -> tuple[list[Rule], list[PatternRule]]:
     rules: list[Rule] = []
     pattern_rules: list[PatternRule] = []
 
-    if rules_path:
+    for rules_path in rules_paths:
         path = Path(rules_path)
         try:
             raw_rules = json.loads(path.read_text(encoding="utf-8"))
@@ -236,8 +241,8 @@ def main() -> int:
         return 2
 
     ignored_paths = set()
-    if args.rules:
-        ignored_paths.add(Path(args.rules).resolve())
+    for rules_path in args.rules:
+        ignored_paths.add(Path(rules_path).resolve())
 
     findings = []
     for file_path in iter_files(root, extensions):

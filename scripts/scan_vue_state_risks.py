@@ -46,7 +46,7 @@ class Finding:
     path: Path
     line: int
     column: int
-    severity: str
+    priority: str
     code: str
     message: str
     snippet: str
@@ -55,79 +55,149 @@ class Finding:
 @dataclass(frozen=True)
 class LineRule:
     code: str
-    severity: str
+    priority: str
     pattern: re.Pattern[str]
     message: str
+    scan_strings: bool = False
 
 
 LINE_RULES = [
     LineRule(
         code="STATE_MERGE_OBJECT_ASSIGN",
-        severity="HIGH",
-        pattern=re.compile(r"\bObject\.assign\s*\("),
-        message="对象合并更新，确认是否应该整体替换，避免保留上一次数据里的旧字段。",
-    ),
-    LineRule(
-        code="STATE_MERGE_SPREAD",
-        severity="HIGH",
-        pattern=re.compile(r"=\s*\{[^}\n]*\.\.\.[^}\n]+,\s*\.\.\.[^}\n]+\}"),
-        message="对象 spread 合并更新，确认新数据是否可能缺字段并残留旧信息。",
+        priority="REVIEW_FIRST",
+        pattern=re.compile(r"\bObject\.assign\s*\(\s*(?!\{\s*\})"),
+        message="向已有对象合并数据，确认是否应该整体替换，避免保留上一次数据里的旧字段。",
     ),
     LineRule(
         code="STATE_FIELD_MUTATION_AFTER_ASYNC",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\b\w+\.value\.[\w$]+\s*="),
         message="ref 对象字段级更新，确认这里不是在写入一个新的页面/接口实体。",
     ),
     LineRule(
-        code="ASYNC_NOT_AWAITED",
-        severity="LEAD",
-        pattern=re.compile(r"(?<!await\s)(?<!return\s)\b(?:api|post|get|fetch|request)[\w$]*\s*\("),
-        message="请求或异步调用没有 await/return，确认后续 UI、跳转或计时不依赖它完成。",
-    ),
-    LineRule(
         code="WATCH_SIDE_EFFECT",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\bwatch(?:Effect)?\s*\("),
         message="watch/watchEffect 入口，检查内部是否会重复触发请求、跳转、计时或刷新。",
     ),
     LineRule(
         code="ROUTE_GUARD_SIDE_EFFECT",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\brouter\.(?:push|replace)\s*\("),
         message="路由跳转，确认它不会被初始化、watcher 或接口回调重复触发。",
     ),
     LineRule(
         code="PROMISE_BRANCH_CLOSURE",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\bnew\s+Promise\s*\("),
         message="手写 Promise 包装，确认所有业务分支都会 return/resolve/reject，并释放 loading 或 lock。",
     ),
     LineRule(
         code="LOCK_SET_TRUE",
-        severity="HIGH",
-        pattern=re.compile(r"\b\w*(?:lock|Lock|locked|Locked|loading|Loading|submitting|Submitting)\w*\s*=\s*true\b"),
+        priority="REVIEW_FIRST",
+        pattern=re.compile(
+            r"\b[\w$]*(?:lock|Lock|locked|Locked|loading|Loading|submitting|Submitting)[\w$]*"
+            r"(?:\.value)?\s*=\s*true\b"
+        ),
         message="锁或 loading 被置为 true，确认成功、失败、取消、SDK 配置失败分支都会恢复。",
     ),
     LineRule(
         code="TOAST_OBJECT_PAYLOAD",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\b(?:toast\.\w+|Toast|showToast|showFailToast|showSuccessToast)\s*\(\s*\{"),
         message="toast/modal 首参是对象，确认当前库是否会把对象渲染成 [object Object] 或丢失 message。",
     ),
     LineRule(
         code="DYNAMIC_SCRIPT_LOAD",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\bcreateElement\s*\(\s*['\"]script['\"]\s*\)|\.appendChild\s*\(\s*\w*script", re.IGNORECASE),
         message="动态脚本加载，确认加载失败时用户动作不会表现为成功或无响应。",
+        scan_strings=True,
     ),
     LineRule(
         code="DIRECT_STORAGE_ACCESS",
-        severity="LEAD",
+        priority="LEAD",
         pattern=re.compile(r"\b(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\s*\("),
         message="直接读写浏览器存储，确认 key 包含必要的用户、活动、语言或渠道身份。",
     ),
 ]
+
+
+def mask_non_code(text: str, preserve_strings: bool = False) -> str:
+    """Mask comments and optionally strings while preserving offsets and newlines."""
+    chars = list(text)
+    index = 0
+    state = "code"
+    quote = ""
+
+    while index < len(chars):
+        current = chars[index]
+        next_char = chars[index + 1] if index + 1 < len(chars) else ""
+
+        if state == "code":
+            if current == "/" and next_char == "/":
+                chars[index] = chars[index + 1] = " "
+                index += 2
+                state = "line_comment"
+                continue
+            if current == "/" and next_char == "*":
+                chars[index] = chars[index + 1] = " "
+                index += 2
+                state = "block_comment"
+                continue
+            if text.startswith("<!--", index):
+                for offset in range(4):
+                    chars[index + offset] = " "
+                index += 4
+                state = "html_comment"
+                continue
+            if current in {"'", '"', "`"}:
+                quote = current
+                if not preserve_strings:
+                    chars[index] = " "
+                index += 1
+                state = "string"
+                continue
+        elif state == "line_comment":
+            if current == "\n":
+                state = "code"
+            else:
+                chars[index] = " "
+        elif state == "block_comment":
+            if current == "*" and next_char == "/":
+                chars[index] = chars[index + 1] = " "
+                index += 2
+                state = "code"
+                continue
+            if current != "\n":
+                chars[index] = " "
+        elif state == "html_comment":
+            if text.startswith("-->", index):
+                for offset in range(3):
+                    chars[index + offset] = " "
+                index += 3
+                state = "code"
+                continue
+            if current != "\n":
+                chars[index] = " "
+        elif state == "string":
+            if current == "\\" and next_char:
+                if not preserve_strings:
+                    chars[index] = " "
+                    if next_char != "\n":
+                        chars[index + 1] = " "
+                index += 2
+                continue
+            if current == quote:
+                if not preserve_strings:
+                    chars[index] = " "
+                state = "code"
+            elif not preserve_strings and current != "\n":
+                chars[index] = " "
+
+        index += 1
+
+    return "".join(chars)
 
 
 def parse_args() -> argparse.Namespace:
@@ -154,25 +224,59 @@ def iter_files(root: Path, extensions: set[str]):
             yield path
 
 
-def find_empty_catches(path: Path, text: str) -> list[Finding]:
+def finding_from_match(
+    path: Path,
+    source_text: str,
+    match: re.Match[str],
+    priority: str,
+    code: str,
+    message: str,
+) -> Finding:
+    line = source_text.count("\n", 0, match.start()) + 1
+    line_start = source_text.rfind("\n", 0, match.start()) + 1
+    line_end = source_text.find("\n", match.start())
+    if line_end == -1:
+        line_end = len(source_text)
+    return Finding(
+        path=path,
+        line=line,
+        column=match.start() - line_start + 1,
+        priority=priority,
+        code=code,
+        message=message,
+        snippet=source_text[line_start:line_end].strip(),
+    )
+
+
+def find_empty_catches(path: Path, source_text: str, code_text: str) -> list[Finding]:
     findings: list[Finding] = []
-    for match in re.finditer(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}", text, re.DOTALL):
-        line = text.count("\n", 0, match.start()) + 1
-        line_start = text.rfind("\n", 0, match.start()) + 1
-        column = match.start() - line_start + 1
-        snippet = text[match.start() : match.end()].replace("\n", " ").strip()
+    for match in re.finditer(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}", code_text, re.DOTALL):
         findings.append(
-            Finding(
-                path=path,
-                line=line,
-                column=column,
-                severity="HIGH",
-                code="EMPTY_CATCH",
-                message="空 catch 会吞掉真实失败，确认用户是否能看到失败原因并重试。",
-                snippet=snippet,
+            finding_from_match(
+                path,
+                source_text,
+                match,
+                "REVIEW_FIRST",
+                "EMPTY_CATCH",
+                "空 catch 会吞掉真实失败，确认用户是否能看到失败原因并重试。",
             )
         )
     return findings
+
+
+def find_spread_merges(path: Path, source_text: str, code_text: str) -> list[Finding]:
+    pattern = re.compile(r"=\s*\{(?=[^{}]{0,500}\.\.\.[^{}]{0,500}\.\.\.)[^{}]{0,500}\}", re.DOTALL)
+    return [
+        finding_from_match(
+            path,
+            source_text,
+            match,
+            "REVIEW_FIRST",
+            "STATE_MERGE_SPREAD",
+            "对象 spread 合并更新，确认新数据是否可能缺字段并残留旧信息。",
+        )
+        for match in pattern.finditer(code_text)
+    ]
 
 
 def scan_file(path: Path) -> list[Finding]:
@@ -181,23 +285,29 @@ def scan_file(path: Path) -> list[Finding]:
     except UnicodeDecodeError:
         return []
 
-    findings = find_empty_catches(path, text)
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        stripped = line.strip()
-        if not stripped or stripped.startswith("//"):
+    code_text = mask_non_code(text)
+    code_with_strings = mask_non_code(text, preserve_strings=True)
+    findings = find_empty_catches(path, text, code_text)
+    findings.extend(find_spread_merges(path, text, code_text))
+    source_lines = text.splitlines()
+    code_lines = code_text.splitlines()
+    string_lines = code_with_strings.splitlines()
+    for line_number, source_line in enumerate(source_lines, start=1):
+        if not source_line.strip():
             continue
         for rule in LINE_RULES:
-            match = rule.pattern.search(line)
+            candidate = string_lines[line_number - 1] if rule.scan_strings else code_lines[line_number - 1]
+            match = rule.pattern.search(candidate)
             if match:
                 findings.append(
                     Finding(
                         path=path,
                         line=line_number,
                         column=match.start() + 1,
-                        severity=rule.severity,
+                        priority=rule.priority,
                         code=rule.code,
                         message=rule.message,
-                        snippet=stripped,
+                        snippet=source_line.strip(),
                     )
                 )
     return findings
@@ -225,12 +335,15 @@ def main() -> int:
 
     for item in findings:
         rel_path = item.path.relative_to(root)
-        print(f"{rel_path}:{item.line}:{item.column} [{item.severity}] [{item.code}] {item.message}")
+        print(f"{rel_path}:{item.line}:{item.column} [{item.priority}] [{item.code}] {item.message}")
         print(f"  {item.snippet}")
 
-    high_count = sum(1 for item in findings if item.severity == "HIGH")
-    lead_count = len(findings) - high_count
-    print(f"\nFound {len(findings)} Vue state/async review lead(s): {high_count} high, {lead_count} lead.")
+    review_first_count = sum(1 for item in findings if item.priority == "REVIEW_FIRST")
+    lead_count = len(findings) - review_first_count
+    print(
+        f"\nFound {len(findings)} Vue state/async review lead(s): "
+        f"{review_first_count} review first, {lead_count} lead."
+    )
     return 1
 
 

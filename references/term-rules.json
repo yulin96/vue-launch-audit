@@ -1,77 +1,7 @@
 [
   {
-    "correct": "WeChat",
-    "wrong": ["Wechat", "weChat", "WECHAT"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "WeCom",
-    "wrong": ["Wecom", "weCom", "WECom"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "DingTalk",
-    "wrong": ["Dingtalk", "dingTalk", "DINGTALK"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "Alipay",
-    "wrong": ["AliPay", "alipay", "ALIPAY"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "JavaScript",
-    "wrong": ["Javascript", "javaScript", "JS脚本"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "TypeScript",
-    "wrong": ["Typescript", "typeScript", "TS脚本"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "Tailwind CSS",
-    "wrong": ["TailwindCSS", "TailwindCss", "tailwind css"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "Element Plus",
-    "wrong": ["ElementPlus", "element plus", "ElementPlus组件库"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "Node.js",
-    "wrong": ["NodeJS", "NodeJs", "node.js"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "pnpm",
-    "wrong": ["PNPM", "Pnpm"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "npm",
-    "wrong": ["NPM"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "iOS",
-    "wrong": ["IOS", "Ios", "ios端"],
-    "case_sensitive": true
-  },
-  {
     "correct": "Android",
-    "wrong": ["Andriod", "android端", "安卓Android"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "登录",
-    "wrong": ["登陆"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "账号",
-    "wrong": ["帐号", "帐户"],
+    "wrong": ["Andriod"],
     "case_sensitive": true
   },
   {
@@ -81,22 +11,17 @@
   },
   {
     "correct": "身份证",
-    "wrong": ["身份正", "身分证"],
+    "wrong": ["身份正"],
     "case_sensitive": true
   },
   {
     "correct": "手机号",
-    "wrong": ["手机号码号", "手机号吗"],
+    "wrong": ["手机号码号"],
     "case_sensitive": true
   },
   {
     "correct": "请稍后再试",
-    "wrong": ["请稍后在试", "请稍候再试"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "获取",
-    "wrong": ["获去", "获许"],
+    "wrong": ["请稍后在试"],
     "case_sensitive": true
   },
   {
@@ -117,26 +42,6 @@
   {
     "correct": "权益",
     "wrong": ["权意"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "检查重复标点，通常只保留一个",
-    "patterns": ["[，。！？；：、]{2,}", "[!?]{2,}"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "检查重复词，通常只保留一次",
-    "patterns": ["(请先|立即|马上|成功|失败|提交|确认|取消|返回|领取|登录|注册|支付|保存|分享|加载|刷新|重新|再次)\\1"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "检查中文之间是否误加空格",
-    "patterns": ["[\\u4e00-\\u9fff] [\\u4e00-\\u9fff]"],
-    "case_sensitive": true
-  },
-  {
-    "correct": "检查全角英文或数字，通常应使用半角",
-    "patterns": ["[Ａ-Ｚａ-ｚ０-９]"],
     "case_sensitive": true
   }
 ]

@@ -82,6 +82,6 @@ Use this checklist when the project is close to release and you need extra cover
 
 - Check visible page text, button text, titles, alt text, metadata, and share copy.
 - Watch for brand/product name mistakes, mixed casing, repeated punctuation, and broken links.
-- Run the bundled term scanner and then manually verify the hits.
+- Run the bundled high-confidence term rules and then manually verify the hits. Add the optional style rules only when their conventions match the project.
 - Pay special attention to business-critical names where one wrong letter changes meaning.
 - Keep display labels aligned with the form or source-of-truth page they summarize.
