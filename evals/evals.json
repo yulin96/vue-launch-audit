@@ -1,71 +1,100 @@
 {
+  "schema_version": 2,
   "skill_name": "vue-launch-audit",
   "evals": [
     {
-      "id": 1,
-      "prompt": "使用 $vue-launch-audit 帮我检查一下这个 Vue H5 项目上线前有没有风险，先不要改代码，也不要 build。",
-      "expected_output": "应该进入审查模式，先说明检查范围；检查 package scripts、入口、路由、请求、状态和文案；不自动改代码，不执行 build；最终按风险等级汇报确认问题和未验证项。",
-      "files": []
+      "id": "full-audit-deploy-safety",
+      "prompt": "使用 $vue-launch-audit 检查这个 Vue 项目上线风险，先不要改代码，也不要 build。",
+      "mode": "full_audit",
+      "fixture": "fixtures/deploy-side-effect",
+      "assertions": [
+        "confirms_vue_before_audit",
+        "inspects_package_scripts_and_vite_plugins_first",
+        "does_not_run_build_or_deploy",
+        "does_not_modify_files",
+        "reports_static_runtime_boundary"
+      ]
     },
     {
-      "id": 2,
-      "prompt": "这个活动页首屏接口切换用户后偶尔显示上一个人的姓名，你用 $vue-launch-audit 看下是不是状态残留。",
-      "expected_output": "应该优先追踪页面入口、接口返回、状态更新和 UI 读取链路；运行或建议运行状态风险扫描；重点确认对象合并、字段级更新、watcher 重复触发等 stale state 问题；先给根因和影响，不直接扩大重构。",
-      "files": []
+      "id": "targeted-state-residual",
+      "prompt": "切换用户后偶尔显示上一个人的姓名，用 $vue-launch-audit 只分析这个问题。",
+      "mode": "targeted_diagnosis",
+      "fixture": "fixtures/state-residual",
+      "assertions": [
+        "does_not_expand_to_full_audit",
+        "traces_response_state_and_visible_ui",
+        "treats_scanner_output_as_lead",
+        "identifies_object_merge_as_supported_cause",
+        "does_not_modify_files"
+      ]
     },
     {
-      "id": 3,
-      "prompt": "用 $vue-launch-audit 帮我扫一下文案，有没有登录用词、品牌名大小写、重复标点这类上线前会丢脸的问题。",
-      "expected_output": "应该运行或建议运行默认 term scan；品牌名、大小写和标点规范已明确属于本次范围，可以追加可选 style rules 或用 --pair 传入项目品牌词；把扫描结果当线索人工确认；只报告用户可见或发布相关文案问题。",
-      "files": []
+      "id": "copy-baseline-only",
+      "prompt": "用 $vue-launch-audit 检查用户可见文案中的明确错词，不检查品牌风格。",
+      "mode": "copy_audit",
+      "fixture": "fixtures/copy-audit",
+      "assertions": [
+        "uses_baseline_term_rules_only",
+        "reports_visible_baseline_typo",
+        "does_not_report_unapproved_style_rules",
+        "does_not_modify_files"
+      ]
     },
     {
-      "id": 4,
-      "prompt": "看看这个 Vite 项目发布前有没有问题，但它不是 Vue，是 React。",
-      "expected_output": "不应该使用 vue-launch-audit 作为主流程；应该说明该 skill 不适合非 Vue Vite 项目，并改用普通前端发布检查方式。",
-      "files": []
+      "id": "copy-approved-style",
+      "prompt": "用 $vue-launch-audit 检查文案；本项目明确采用 WeChat 拼写和单个中文标点。",
+      "mode": "copy_audit",
+      "fixture": "fixtures/copy-audit",
+      "assertions": [
+        "loads_optional_style_rules",
+        "confirms_hits_are_user_visible",
+        "reports_brand_case_and_repeated_punctuation"
+      ]
     },
     {
-      "id": 5,
-      "prompt": "用 $vue-launch-audit 检查一下这个活动页，入口链接有 ?inside 和普通链接两种，最近有人反馈分享进来分支不对。不要改代码。",
-      "expected_output": "应该先追踪分享链接生成、入口页分支判断、路由参数、hash/query 保留和持久化 key；把配置和页面判断放在一起比对；不直接修复，不 build；报告确认问题和需要浏览器验证的分支。",
-      "files": []
+      "id": "non-vue-routing",
+      "prompt": "看看这个 Vite 项目发布前有没有问题，但它是 React。",
+      "mode": "not_applicable",
+      "fixture": "fixtures/react-negative",
+      "assertions": [
+        "does_not_use_vue_audit_workflow",
+        "does_not_run_vue_scanners",
+        "states_non_vue_boundary"
+      ]
     },
     {
-      "id": 6,
-      "prompt": "这个扫码按钮偶尔点完就没反应，怀疑 wx 配置失败后 scanLock 没恢复。用 $vue-launch-audit 看下。",
-      "expected_output": "应该优先检查 SDK 初始化、scanLock 或模块级锁、成功/失败/取消/配置失败分支、按钮 loading/disabled 恢复；可以运行状态风险扫描，但必须人工确认用户流程后再报告。",
-      "files": []
+      "id": "sdk-lock-targeted",
+      "prompt": "扫码按钮在 wx 配置失败后一直没反应，用 $vue-launch-audit 找原因。",
+      "mode": "targeted_diagnosis",
+      "fixture": null,
+      "assertions": [
+        "loads_sdk_mobile_reference",
+        "checks_config_cancel_timeout_and_error_closure",
+        "separates_static_evidence_from_device_runtime"
+      ]
     },
     {
-      "id": 7,
-      "prompt": "检查一下这个项目的打印功能，代码里动态加载了 public 下面的打印脚本，按钮调用 window.printsd_NEW?.(...)，不要打开浏览器。",
-      "expected_output": "应该检查动态脚本注入、加载失败分支、可选全局调用是否把失败伪装成成功、入口初始化顺序和用户提示；不打开浏览器，只在报告里说明如果要确认需批准浏览器验证。",
-      "files": []
+      "id": "runtime-gap",
+      "prompt": "URL 变了但 keep-alive 页面还是旧内容，保留 transition 和 keep-alive，只做静态分析。",
+      "mode": "targeted_diagnosis",
+      "fixture": null,
+      "assertions": [
+        "checks_component_and_cache_identity",
+        "preserves_user_constraint",
+        "does_not_open_browser",
+        "labels_unreproduced_behavior_likely_not_confirmed"
+      ]
     },
     {
-      "id": 8,
-      "prompt": "这个 Vue 页面 URL 已经变了但内容还是旧页面，去掉 keep-alive 和 transition 好像就好了，但我需要保留这两个。用 $vue-launch-audit 分析。",
-      "expected_output": "应该先检查 App.vue route shell、router-view key、Transition、keep-alive 缓存身份和全局 DOM/click 插件；不能建议直接删除 keep-alive/transition；需要说明 route.fullPath 和 route.name 这类 key 选择的影响。",
-      "files": []
-    },
-    {
-      "id": 9,
-      "prompt": "帮我扫一下上线风险，这个仓库 vite.config 里有 OSS/FTP 上传插件，package scripts 里也有 deploy。不要执行 build。",
-      "expected_output": "应该先检查 package scripts、vite 配置和上传/部署副作用；明确不运行 build；把 deploy/upload 配置、前端暴露密钥、环境变量漂移作为发布风险检查点。",
-      "files": []
-    },
-    {
-      "id": 10,
-      "prompt": "表单提交失败后按钮一直 loading，代码里有 new Promise 包了一层 SDK 回调。用 $vue-launch-audit 找原因。",
-      "expected_output": "应该检查 Promise 所有业务分支是否 resolve/reject/return，loading/submitting/lock 是否在成功、失败、取消、异常分支恢复；报告根因和用户影响，不把 scanner 命中直接当结论。",
-      "files": []
-    },
-    {
-      "id": 11,
-      "prompt": "这个项目用了 vue-sonner，有用户反馈 toast 显示 [object Object]，你用 $vue-launch-audit 看下类似问题。",
-      "expected_output": "应该检查 toast/modal 首参和 options 参数形态，确认具体库的调用约定，搜索用户可见提示，不把所有对象参数都硬报为 bug；最终指出真实可见风险。",
-      "files": []
+      "id": "scoped-implementation",
+      "prompt": "已经确认是新用户数据 Object.assign 到旧对象导致残留，请用 $vue-launch-audit 做最小修复。",
+      "mode": "implementation",
+      "fixture": "fixtures/state-residual",
+      "assertions": [
+        "changes_only_confirmed_state_assignment",
+        "runs_targeted_validation",
+        "does_not_expand_to_full_audit_or_build"
+      ]
     }
   ]
 }

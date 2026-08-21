@@ -1,165 +1,89 @@
 ---
 name: vue-launch-audit
-description: Review Vue applications before release, especially Vue projects built with Vite, mobile H5, campaign, or lightweight app projects. Use when Codex needs to inspect Vue program logic, risky user flows, route/request/state interactions, release blockers, user-facing copy, and brand or product spelling mistakes. Also use for Chinese requests like "检查一下", "上线前看一下", "发布前检查", "看看这个 H5/Vue 项目有没有风险", or "帮我扫一下路由/请求/状态/文案问题". Do not use this skill for non-Vue Vite projects.
+description: Audit Vue release readiness or diagnose a release-related Vue user flow. Use for Vue projects when the user asks for a pre-release review, launch-risk check, targeted route/request/state diagnosis, or user-visible copy audit. Do not use for non-Vue projects, ordinary style review, or unrelated component refactoring.
 ---
 
 # Vue Launch Audit
 
-Audit launch-bound Vue projects for user-impacting problems, not style trivia. Start with the flows that can break the release, then widen to hidden risks and wording errors.
+Find user-impacting release risks in Vue applications and report only what the available evidence supports.
 
-## Completion Standard
+## Choose One Mode
 
-Before inspecting files, define what "done" means for the current request. Use that standard to decide when to stop.
+Select the narrowest mode that satisfies the request. Do not run a full audit for a targeted symptom.
 
-- If the user says only "检查一下", "看一下", or similar short Chinese review wording, treat it as an audit request. Inspect and report first; do not edit code unless the user asks for fixes.
-- For a review request, finish with confirmed release risks, verification results, and any untested gaps. Do not report speculative style cleanup as a launch issue.
-- If the user explicitly asks to fix or implement, diagnose the root cause and affected flow first, then make the scoped change without requiring a second confirmation. Ask before editing only when the necessary change would expand beyond the requested scope.
-- If something fails during verification, investigate far enough to identify the likely root cause and user impact. Do not silently convert a review into a patching session.
-- Keep the final response direct and practical: what was checked, what was confirmed, and what still needs attention.
+- **Full audit**: The user asks for a general pre-release or launch-risk review. Read [references/review-checklist.md](references/review-checklist.md).
+- **Targeted diagnosis**: The user names a broken or suspicious flow, such as stale data, a stuck button, a wrong route branch, or a silent SDK action. Read [references/targeted-diagnosis.md](references/targeted-diagnosis.md).
+- **Copy audit**: The request is mainly about visible wording, brand names, links, numbers, or typography. Read [references/copy-audit.md](references/copy-audit.md).
+- **Implementation**: The user explicitly asks to fix a confirmed problem. Diagnose first, then make only the scoped change and run targeted validation. Do not widen the task into a full audit.
 
-## Audit Workflow
+Read these references only when the project or reported flow needs them:
 
-1. Check the project shape and build safety.
-   Confirm the project uses Vue, then read `package.json`, `vite.config.*`, scripts, environment files, routing, entry files, main pages, request utilities, and state. Inspect build scripts for deploy, upload, analytics, or other production side effects before choosing verification commands. Do not run a build unless the user explicitly asks for it.
-2. Define the release surface.
-   Identify the pages, routes, query parameters, persisted keys, SDKs, API calls, runtime configuration, heavy assets, and rendering engines that can affect the live build.
-3. Map the critical flows.
-   Identify the paths a real user must complete: page entry, login/auth, route jumps, form submit, payment/upload/share, confirmation, and error recovery.
-4. Trace requests, routes, and state together.
-   Follow the actual data path from page entry to request to UI result. Start from the real startup chain (`index.html`/`main.ts`/init config/router guards) before diving into leaf components. Look for missing query params, wrong response-shape assumptions, async races, stale state, duplicate submissions, incorrect redirects, and UI success shown before backend confirmation.
-5. Scan recent Codex-prone bug patterns.
-   Run `scripts/scan_vue_state_risks.py` when the audit includes state, async flow, page data, storage, SDK actions, dynamic scripts, toasts, or user-visible stale information. Treat its output as leads that need manual confirmation. Prioritize cases where new API or route data is merged into an existing object, because stale fields from the previous user/page/item can stay visible. Prefer replacing the whole display data object when the response represents a new entity or page state; only keep field-level updates when the UI is intentionally editing one field.
-6. Review failure paths.
-   Empty `catch` blocks, generic toasts, ignored business status codes, promise branches that never `return`/`resolve`/`reject`, locks that are not released, disabled buttons that never recover, and fallbacks to missing routes are launch risks when users cannot understand or retry a failure.
-7. Check release-specific risks.
-   Focus on environment-dependent behavior, tracking/reporting hooks, mobile webview assumptions, production-only switches, missing guards, build-time failures, fragile integrations, frontend-exposed secrets, deploy/upload scripts, and third-party globals or dynamically loaded scripts that may be absent. For asset-heavy or 3D pages, inspect dependencies, model/image sizes, browser targets, preload paths, and first-load/rendering cost before giving performance or hardware conclusions.
-8. Scan copy and terms.
-   Run `scripts/scan_terms.py` with the high-confidence `references/term-rules.json`, then manually inspect visible copy for product names, CTA text, numbers, dates, links, and obvious misspellings. Add `references/term-style-rules.json` only when its terminology and typography conventions match the project.
-9. Verify before reporting.
-   Run the strongest realistic checks available for the repo without building by default. Prefer `pnpm type-check`, `pnpm lint`, and targeted code or script checks when feasible, but check the repo's actual scripts and tool versions first because ESLint 9 and custom config files may need different commands. Only run a build or browser check when the user explicitly approves it. When a risk depends on real page behavior, report that browser verification is recommended and wait for approval before opening the app.
-10. Report findings by `P0`, `P1`, `P2`, and `P3`.
-   Lead with concrete problems, file paths, impact, and how to reproduce. Keep summaries short. Call out what was verified versus what remains a risk hypothesis.
+- Mobile WebView, share, scan, payment, upload, print, or other callback-based SDK flow: [references/sdk-mobile-risks.md](references/sdk-mobile-risks.md).
+- 3D, canvas, video, large images, preload manifests, or resource-performance claims: [references/asset-performance-risks.md](references/asset-performance-risks.md).
+- Reusable findings format: [references/report-template.md](references/report-template.md).
 
-## What to Prioritize
+## Boundaries
 
-- Broken or misleading user flows over code style.
-- Logic that behaves differently on first load, refresh, back navigation, or slow network.
-- Places where request, route, and state interact.
-- Entry parameters, share links, hash routes, and persisted storage keys that decide first-load behavior.
-- `App.vue` route shells, `router-view` keys, `Transition`, and `keep-alive` identity. If the URL changes but the page looks stuck, check component reuse and cache identity before removing animation or cache behavior the app needs.
-- State replacement mistakes where a new API result, selected item, or route entry is merged into old object data and can leave previous fields behind.
-- Callback-updated state that is not the same state read by the visible UI.
-- Watchers, route guards, or polling paths that can retrigger requests, redirects, timers, or refresh logic without a one-shot guard.
-- Silent failures, misleading success states, request locks that stay locked, or failure handling that blocks retry.
-- Runtime identity and session partitioning, especially URL `id`/`appid` values, store persistence keys, and clean-session versus old-localStorage behavior.
-- Layout/bootstrap problems that come from global rem, viewport, preview-mode, or container-size gates. Check the central sizing setup before treating the visible component as the root cause.
-- Animation or focus utilities that run but appear invisible. Confirm the exact DOM node being selected is the visible shell, not an inner transparent wrapper.
-- Preload/resource identity mismatches, especially raw HTML-injected URLs versus runtime asset URLs. Encoded characters such as `%40` and `@` can defeat browser reuse even when the file is the same.
-- Temporary local-test switches that bypass startup work. If 3D, SDK, or loading code is skipped, verify the overlay/loading state is derived from the same switch so the test UI can actually appear.
-- User-facing text that can ship to production with the wrong name or spelling.
-- User-facing messages produced through toast/modal libraries. Passing the wrong shape can render raw objects such as `[object Object]`, so verify visible output, not only the function call.
-- Request locks and SDK locks that are set before config, permission, or callback success is guaranteed. Check cancel, timeout, config failure, and thrown-error branches, not only the SDK `complete` callback.
-- Hand-written `new Promise(...)` wrappers around SDKs, timers, uploads, or print/share flows. Every branch should deliberately finish or reset state; missing closure often looks like a stuck button or no-op.
-- Production-only risk: missing env values, analytics hooks, third-party SDK setup, upload domains, share metadata, and 404/redirect behavior.
-- High-confidence root causes over broad refactors. Recommend the smallest change that would remove the confirmed risk, but do not implement it during a pure audit.
+- Short review wording such as “检查一下” means inspect and report when the current repository is already known to be Vue and the surrounding request is release-related. It does not authorize edits.
+- A review does not authorize build, deploy, upload, browser interaction, real API calls, or external mutations. Inspect scripts and Vite plugins before choosing validation commands.
+- Run a build or browser flow only when the user explicitly requests or approves it. If runtime behavior is required for confirmation, report the gap and the shortest useful validation path.
+- Never print secret values from `.env*`, deploy configuration, tokens, credentials, signing keys, or private URLs. Report the key name, location, exposure path, and remediation without reproducing the value.
+- Scanner output is navigation evidence, not a finding. Trace the affected user flow before assigning severity.
+- Stop when the selected mode's completion condition is satisfied. Do not continue into unrelated cleanup, refactoring, UI polish, or broader testing.
 
-## Vue-Specific Hotspots
+## Adaptive Workflow
 
-- `src/router`, route guards, route params, redirects, and fallback routes.
-- `src/pages` and `src/components` for actual user journeys and conditional rendering.
-- `src/stores`, composables, and watchers for stale or duplicated state transitions.
-- `src/utils/request*` and submit hooks for retries, duplicate actions, failure messages, and data shape mismatches.
-- `src/plugins` and startup code for SDK bootstrapping, rem adaptation, analytics, and global side effects.
-- `src/App.vue` route shells, `router-view` wrappers, `Transition`, `keep-alive`, global click/haptic handlers, and startup/loading overlays.
-- `index.html`, public runtime config, and dynamically injected scripts for globals that source code assumes are present.
-- `.env*`, `vite.config.*`, and deploy scripts for release-only drift.
-- `config*`, `constants*`, generated route maps, and runtime config files that can disagree with source routes or deployed URLs.
-- Direct `localStorage` / `sessionStorage` reads and persisted-store setup, especially when the app can be entered by different activity IDs, tenants, languages, inside/outside modes, or share links.
-- Heavy runtime assets such as `.glb`, `.gltf`, high-density images, video, sprite sheets, and generated preload manifests.
+1. **Confirm applicability and safety.** Verify Vue from `package.json` or source before using the workflow. Read package scripts, lockfile/package-manager metadata, and Vite plugins before running commands. If the project is not Vue, stop using this skill.
+2. **Define completion.** State the selected mode, in-scope flows, permitted verification, and what evidence would be sufficient. For a full audit, rank the release surface before reading leaf components. For a targeted diagnosis, start from the reported symptom.
+3. **Trace the smallest complete path.** Follow entry/configuration → route or action → request/SDK → state → visible UI → failure and retry. Inspect adjacent code only when it participates in that path.
+4. **Use scanners selectively.** Resolve bundled paths relative to this `SKILL.md`. Prefer JSON output and restrict large repositories with `--include-path`, `--changed-only`, or `--rule`. Review the source around every returned lead.
+5. **Verify proportionally.** Use the repository's actual package manager and scripts. Prefer type-check, lint, targeted unit tests, and minimal command-line checks. Do not assume `pnpm` or a script name without inspecting the repo.
+6. **Report calibrated results.** Separate impact severity from evidence state, list what was run, and state runtime or business gaps explicitly.
 
-Read `references/review-checklist.md` when you need a broader launch checklist.
+## Evidence Model
 
-## Browser Verification
+Assign impact and evidence independently:
 
-Use browser verification only after the user approves it. Code reading and lightweight checks are the default.
+- `P0`: release is unsafe, the main path is broken, or data can be lost/corrupted.
+- `P1`: an important auth, payment, submit, share, upload, or core business flow can fail or mislead.
+- `P2`: a secondary flow, edge case, or visible release defect is wrong but does not block the main path.
+- `P3`: low-impact release polish worth fixing when time permits.
 
-- Do not open the app during the initial audit. If browser confirmation would materially change the confidence of a finding, mention it in the report and ask for approval.
-- Recommend browser verification when the audit depends on a real flow: route entry, form submit, modal/popup, scan/share/payment/upload, mobile viewport behavior, or a suspected stale-state display.
-- After approval, walk the shortest path that proves or disproves the risk. Avoid turning browser verification into unrelated UI polish review.
-- Record what was reproduced, what was not reproducible, and any environment limits such as missing credentials, unavailable API, or SDK-only behavior.
-- Do not edit UI or code as part of this skill unless the user explicitly changes the task from checking to implementation.
+Evidence states:
 
-## Term Scan
+- `Confirmed`: the relevant code path or targeted check proves the behavior.
+- `Likely`: static evidence strongly supports the cause, but required runtime behavior was not reproduced.
+- `Lead`: a scanner or isolated code shape needs more tracing; do not publish it as a finding.
+- `Needs business confirmation`: correctness depends on an API contract, product rule, or deployment assumption not present in the repository.
 
-Use the bundled scanner when wording or brand consistency matters.
+Do not inflate severity to compensate for weak evidence. Do not downgrade a confirmed high-impact issue because it was found statically.
 
-Resolve all bundled resource paths relative to this `SKILL.md`. Do not assume the skill is installed under `$CODEX_HOME/skills`.
+## Bundled Scanners
 
-PowerShell example:
-
-```powershell
-$skillDir = "<absolute directory containing this SKILL.md>"
-python "$skillDir/scripts/scan_terms.py" `
-  --root . `
-  --rules "$skillDir/references/term-rules.json"
-```
-
-Bash example:
+Use Python 3 in shell examples:
 
 ```bash
 skill_dir="<absolute directory containing this SKILL.md>"
-python "$skill_dir/scripts/scan_terms.py" \
-  --root . \
-  --rules "$skill_dir/references/term-rules.json"
-```
-
-- Pass project-specific brand or product names with `--pair Correct=Wrong`. If a convention is reusable but not universally correct, add it to the optional `references/term-style-rules.json`, not the baseline rules.
-- Keep `references/term-rules.json` limited to high-confidence mistakes. Pass the optional `references/term-style-rules.json` as a second `--rules` argument only after confirming that its brand, terminology, punctuation, and spacing conventions apply to the project.
-- The scanner accepts repeated `--rules` arguments and supports fixed `wrong` terms plus regex `patterns`.
-- Treat scanner output as leads, not final truth. Confirm whether each hit is user-facing, test-only, or intentional.
-- Re-run the scan after making wording fixes.
-
-## State Risk Scan
-
-Use the bundled state scanner when the release risk may involve stale page data, async handoff, duplicated requests, or watcher-driven navigation.
-
-Example:
-
-```powershell
-$skillDir = "<absolute directory containing this SKILL.md>"
-python "$skillDir/scripts/scan_vue_state_risks.py" --root .
+python3 "$skill_dir/scripts/scan_vue_state_risks.py" \
+  --root . --format json --include-path 'src/**'
 ```
 
 ```bash
 skill_dir="<absolute directory containing this SKILL.md>"
-python "$skill_dir/scripts/scan_vue_state_risks.py" --root .
+python3 "$skill_dir/scripts/scan_terms.py" \
+  --root . --rules "$skill_dir/references/term-rules.json" \
+  --format json --include-path 'src/**'
 ```
 
-- Confirm every hit manually. The scanner finds code shapes that often hide launch bugs; it does not prove a bug by itself.
-- The scanner exits with code `1` when it finds review leads. Treat that as "needs inspection", not as a command failure.
-- Check `[REVIEW_FIRST]` hits before `[LEAD]` hits. These labels control review order only; they are not finding severity or proof of a bug. Assign `P0`-`P3` only after tracing the affected user flow.
-- Start with hits in pages, stores, composables, request hooks, and route guards.
-- Pay special attention to `Object.assign(...)`, spread merges such as `{ ...oldData, ...newData }`, and `ref.value.xxx = ...` updates after fetching a new entity. These often mean old fields can remain visible when the new response omits them.
-- When a response represents a new page/entity/status, recommend whole-object replacement. Field-level mutation is only appropriate for deliberate partial edits, counters, local form typing, or known incremental updates.
-- Empty `catch` blocks, swallowed errors, and non-awaited async calls should be checked against the real user flow before being reported as confirmed launch issues.
-- `STATE_MERGE_OBJECT_ASSIGN`, `STATE_MERGE_SPREAD`, `PROMISE_BRANCH_CLOSURE`, `LOCK_SET_TRUE`, `TOAST_OBJECT_PAYLOAD`, `DYNAMIC_SCRIPT_LOAD`, and `DIRECT_STORAGE_ACCESS` are review leads, not confirmed findings. Use them to choose what to read next; report them only when the affected user flow can really get stuck, mislead users, or leak state.
+- `scan_vue_state_risks.py` finds stale-state and async-flow code shapes. Exit `1` means review leads were found, not that execution failed.
+- `scan_terms.py` finds configured wording patterns. Add `term-style-rules.json` only after confirming those conventions apply to the project.
+- Both scanners support `--include-path`, `--exclude-path`, `--changed-only`, `--format text|json`, and `--max-results`. The state scanner also supports repeated `--rule` filters.
 
-## Output Shape
+## Completion
 
-Use `references/report-template.md` when a reusable review report format would help.
+- **Full audit**: report confirmed/likely release findings, verification performed, and meaningful untested gaps.
+- **Targeted diagnosis**: identify the root cause or state exactly which missing evidence prevents confirmation; do not pad the answer with unrelated findings.
+- **Copy audit**: report only user-visible or release-metadata issues after manually confirming scanner hits.
+- **Implementation**: complete the scoped edit and targeted validation, then stop.
 
-When the user asks for a review, structure the answer like this:
-
-1. Findings first, grouped under `P0`, `P1`, `P2`, and `P3` headings in that order.
-2. Use this severity guide:
-   - `P0`: Release blocker. The main path is broken, data can be lost or corrupted, or the live release is unsafe.
-   - `P1`: High risk. Important user paths, payment, auth, submit, share, or key business wording can fail or mislead users.
-   - `P2`: Medium risk. Secondary flows, edge cases, or visible wording issues are wrong but do not fully block launch.
-   - `P3`: Low risk. Minor polish or low-frequency issues worth reporting if time allows.
-3. Each finding should include the affected file, the problem, why it matters, and what behavior can go wrong.
-4. State what you ran to verify the result.
-5. Mention residual risks only after the findings.
-
-If no real issues are found, say so directly and list any testing gaps that still remain.
-
-When the user explicitly asks for implementation, diagnose first and then edit within the stated scope. Pause only when the required change would materially expand that scope.
+Use [references/report-template.md](references/report-template.md) when multiple findings need a consistent report. Omit empty severity sections.

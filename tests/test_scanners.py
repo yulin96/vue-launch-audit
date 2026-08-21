@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -25,11 +27,11 @@ term_scanner = load_module("scan_terms", ROOT / "scripts" / "scan_terms.py")
 
 
 class StateScannerTests(unittest.TestCase):
-    def scan(self, source: str):
+    def scan(self, source: str, rules: set[str] | None = None):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "sample.ts"
             path.write_text(source, encoding="utf-8")
-            return state_scanner.scan_file(path)
+            return state_scanner.scan_file(path, rules)
 
     def test_ignores_comments_strings_and_safe_object_creation(self):
         findings = self.scan(
@@ -56,7 +58,6 @@ scanLoading.value = true
 document.createElement('script')
 """
         )
-        codes = {finding.code for finding in findings}
         self.assertEqual(
             {
                 "EMPTY_CATCH",
@@ -65,9 +66,44 @@ document.createElement('script')
                 "LOCK_SET_TRUE",
                 "DYNAMIC_SCRIPT_LOAD",
             },
-            codes,
+            {finding.code for finding in findings},
         )
         self.assertTrue(all(finding.priority in {"REVIEW_FIRST", "LEAD"} for finding in findings))
+
+    def test_rule_filter_and_sensitive_snippet_redaction(self):
+        findings = self.scan(
+            'const apiKey = "private-value"; apiKeyLoading = true',
+            {"LOCK_SET_TRUE"},
+        )
+        self.assertEqual(["LOCK_SET_TRUE"], [finding.code for finding in findings])
+        self.assertNotIn("private-value", findings[0].snippet)
+        self.assertIn("<redacted>", findings[0].snippet)
+
+    def test_fixture_json_output_and_path_filter(self):
+        fixture = ROOT / "evals" / "fixtures" / "state-residual"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "scan_vue_state_risks.py"),
+                "--root",
+                str(fixture),
+                "--format",
+                "json",
+                "--include-path",
+                "src/**",
+                "--rule",
+                "STATE_MERGE_OBJECT_ASSIGN",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(1, result.returncode)
+        payload = json.loads(result.stdout)
+        self.assertEqual("vue-state-risks", payload["scanner"])
+        self.assertEqual(1, payload["total"])
+        self.assertEqual("Lead", payload["findings"][0]["evidence_state"])
+        self.assertEqual("src/UserPage.vue", payload["findings"][0]["path"])
 
 
 class TermScannerTests(unittest.TestCase):
@@ -90,8 +126,84 @@ class TermScannerTests(unittest.TestCase):
             baseline_hits = term_scanner.scan_file(path, baseline, baseline_patterns)
             combined_hits = term_scanner.scan_file(path, combined, combined_patterns)
 
-        self.assertEqual(["优惠卷"], [item["wrong"] for item in baseline_hits])
-        self.assertEqual({"优惠卷", "Wechat", "！！"}, {item["wrong"] for item in combined_hits})
+        self.assertEqual(["优惠卷"], [item.wrong for item in baseline_hits])
+        self.assertEqual({"优惠卷", "Wechat", "！！"}, {item.wrong for item in combined_hits})
+
+    def test_json_output_limit_and_env_exclusion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src" / "copy.vue").write_text("优惠卷 优惠卷", encoding="utf-8")
+            (root / ".env.production").write_text("TITLE=优惠卷", encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "scan_terms.py"),
+                    "--root",
+                    str(root),
+                    "--rules",
+                    str(ROOT / "references" / "term-rules.json"),
+                    "--format",
+                    "json",
+                    "--max-results",
+                    "1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(1, result.returncode)
+        payload = json.loads(result.stdout)
+        self.assertEqual(2, payload["total"])
+        self.assertEqual(1, payload["returned"])
+        self.assertTrue(payload["truncated"])
+        self.assertEqual("src/copy.vue", payload["findings"][0]["path"])
+
+
+class ChangedOnlyTests(unittest.TestCase):
+    def test_changed_paths_include_modified_and_untracked_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            tracked = root / "tracked.vue"
+            tracked.write_text("<template>ok</template>", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "tracked.vue"], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Skill Test",
+                    "-c",
+                    "user.email=skill@example.invalid",
+                    "commit",
+                    "-qm",
+                    "fixture",
+                ],
+                check=True,
+            )
+            tracked.write_text("<template>changed</template>", encoding="utf-8")
+            (root / "new.ts").write_text("const value = 1", encoding="utf-8")
+
+            self.assertEqual({"new.ts", "tracked.vue"}, state_scanner.changed_paths(root))
+            self.assertEqual({"new.ts", "tracked.vue"}, term_scanner.changed_paths(root))
+
+
+class EvalManifestTests(unittest.TestCase):
+    def test_eval_manifest_has_existing_fixtures_and_observable_assertions(self):
+        payload = json.loads((ROOT / "evals" / "evals.json").read_text(encoding="utf-8"))
+        self.assertEqual(2, payload["schema_version"])
+        modes = {item["mode"] for item in payload["evals"]}
+        self.assertEqual(
+            {"full_audit", "targeted_diagnosis", "copy_audit", "implementation", "not_applicable"},
+            modes,
+        )
+        for item in payload["evals"]:
+            self.assertTrue(item["assertions"])
+            if item["fixture"]:
+                self.assertTrue((ROOT / "evals" / item["fixture"]).is_dir())
 
 
 if __name__ == "__main__":

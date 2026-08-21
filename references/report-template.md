@@ -1,67 +1,35 @@
-# Vue Launch Audit Report Template
+# Vue Launch Audit Report
 
-Use this template to keep release review reports short, practical, and comparable across projects.
-
-## Review Report
-
-Start with the highest-risk findings. Omit empty severity sections unless the user explicitly asked for a full matrix.
+Use this format when multiple findings need a consistent report. Omit empty severity sections and do not force a full report onto a targeted diagnosis.
 
 ```markdown
 ## Findings
 
-### P0
-
-- [Title]
-  - Location: [file or flow]
-  - Impact: [what users or the release can lose]
-  - Cause: [confirmed root cause]
-  - Reproduce: [short path or condition]
-  - Recommendation: [direct recommended change]
-
 ### P1
 
-- [Title]
-  - Location:
-  - Impact:
-  - Cause:
-  - Reproduce:
-  - Recommendation:
-
-### P2
-
-- [Title]
-  - Location:
-  - Impact:
-  - Cause:
-  - Reproduce:
-  - Recommendation:
-
-### P3
-
-- [Title]
-  - Location:
-  - Impact:
-  - Cause:
-  - Reproduce:
-  - Recommendation:
+- [Short user-impact title] — [Confirmed | Likely | Needs business confirmation]
+  - Location: [file/flow]
+  - Impact: [observable release or user consequence]
+  - Evidence: [specific code path, command, or reproduction]
+  - Cause: [smallest supported root cause]
+  - Recommendation: [minimum direct correction]
 
 ## Verification
 
-- Ran: [commands or manual flow]
-- Passed: [what is confirmed]
-- Not verified: [only meaningful gaps]
+- Ran: [commands or targeted inspection]
+- Confirmed: [what the evidence proves]
+- Not verified: [runtime, remote service, device, or business gaps]
 
 ## Residual Risk
 
-- [Remaining launch risk, if any]
+- [Only meaningful remaining release risk]
 ```
-
-If no real launch issue is found, say that directly before listing verification and gaps.
 
 ## Reporting Rules
 
-- Lead with user impact, not implementation detail.
-- Do not list speculative cleanup as launch risk.
-- Do not hide failed checks. If a failed check is in scope, investigate before reporting.
-- Keep file references precise enough to act on, but do not paste long code excerpts.
-- Separate confirmed issues from things that only need manual business confirmation.
+- Severity communicates impact; evidence state communicates confidence. Never merge the two.
+- `Lead` items belong in working notes, not published findings.
+- Lead with user impact and the evidence that supports it.
+- Do not call a cause confirmed when runtime or business evidence is still required.
+- Do not hide failed checks or imply that type-check/lint proves runtime behavior.
+- Keep file references precise and avoid reproducing secrets or long source excerpts.

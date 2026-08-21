@@ -1,0 +1,12 @@
+{
+  "name": "deploy-side-effect-fixture",
+  "private": true,
+  "scripts": {
+    "type-check": "vue-tsc --noEmit",
+    "build": "vite build",
+    "deploy": "vite build --mode production"
+  },
+  "dependencies": {
+    "vue": "^3.5.0"
+  }
+}
