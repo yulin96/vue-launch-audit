@@ -205,6 +205,28 @@ class EvalManifestTests(unittest.TestCase):
             if item["fixture"]:
                 self.assertTrue((ROOT / "evals" / item["fixture"]).is_dir())
 
+    def test_full_audit_evals_cover_reporting_contract(self):
+        payload = json.loads((ROOT / "evals" / "evals.json").read_text(encoding="utf-8"))
+        full_audits = {
+            item["id"]: set(item["assertions"])
+            for item in payload["evals"]
+            if item["mode"] == "full_audit"
+        }
+
+        self.assertIn("full-audit-p0-cross-user-corruption", full_audits)
+        self.assertIn("full-audit-mixed-severity-ordering", full_audits)
+
+        assertions = set().union(*full_audits.values())
+        self.assertTrue(
+            {
+                "shows_p0_and_p1_sections_even_when_empty",
+                "orders_findings_by_severity",
+                "uses_stable_finding_identifiers",
+                "separates_severity_from_evidence_state",
+                "does_not_map_scanner_priority_to_severity",
+            }.issubset(assertions)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

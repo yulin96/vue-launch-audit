@@ -12,7 +12,39 @@
         "inspects_package_scripts_and_vite_plugins_first",
         "does_not_run_build_or_deploy",
         "does_not_modify_files",
-        "reports_static_runtime_boundary"
+        "reports_static_runtime_boundary",
+        "uses_standard_full_audit_summary",
+        "shows_p0_and_p1_sections_even_when_empty"
+      ]
+    },
+    {
+      "id": "full-audit-p0-cross-user-corruption",
+      "prompt": "使用 $vue-launch-audit 做完整上线审查。重点判断切换编辑对象后保存是否会写错用户；不要修改代码或运行 build。",
+      "mode": "full_audit",
+      "fixture": "fixtures/p0-cross-user-corruption",
+      "assertions": [
+        "traces_route_identity_load_and_save_path",
+        "reports_cross_user_overwrite_as_p0_likely",
+        "states_runtime_evidence_needed_for_confirmation",
+        "recommends_block_release",
+        "uses_stable_p0_identifier",
+        "does_not_map_scanner_priority_to_severity",
+        "does_not_modify_files"
+      ]
+    },
+    {
+      "id": "full-audit-mixed-severity-ordering",
+      "prompt": "使用 $vue-launch-audit 做完整上线审查，按发布严重度输出问题；不要修改代码、运行 build 或打开浏览器。",
+      "mode": "full_audit",
+      "fixture": "fixtures/mixed-severity",
+      "assertions": [
+        "reports_checkout_lock_failure_as_p1",
+        "reports_nonfunctional_help_link_below_p1",
+        "orders_findings_by_severity",
+        "uses_stable_finding_identifiers",
+        "separates_severity_from_evidence_state",
+        "recommends_fix_before_release",
+        "does_not_modify_files"
       ]
     },
     {

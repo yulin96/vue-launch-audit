@@ -1,0 +1,7 @@
+{
+  "name": "mixed-severity",
+  "private": true,
+  "dependencies": {
+    "vue": "^3.5.0"
+  }
+}

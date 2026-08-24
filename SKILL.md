@@ -44,8 +44,8 @@ Read these references only when the project or reported flow needs them:
 
 Assign impact and evidence independently:
 
-- `P0`: release is unsafe, the main path is broken, or data can be lost/corrupted.
-- `P1`: an important auth, payment, submit, share, upload, or core business flow can fail or mislead.
+- `P0`: block release when the issue can cause irreversible data loss/corruption, a severe security or privacy breach, or widespread loss of the primary journey with no practical workaround.
+- `P1`: fix before release when an important auth, payment, submit, share, upload, or other core business flow can fail or mislead, but the impact is limited, reversible, or has a practical workaround or rollback.
 - `P2`: a secondary flow, edge case, or visible release defect is wrong but does not block the main path.
 - `P3`: low-impact release polish worth fixing when time permits.
 
@@ -56,7 +56,7 @@ Evidence states:
 - `Lead`: a scanner or isolated code shape needs more tracing; do not publish it as a finding.
 - `Needs business confirmation`: correctness depends on an API contract, product rule, or deployment assumption not present in the repository.
 
-Do not inflate severity to compensate for weak evidence. Do not downgrade a confirmed high-impact issue because it was found statically.
+Do not inflate severity to compensate for weak evidence. A `Likely` issue may still be P0 when its supported impact meets the P0 definition, but state exactly what prevents confirmation. Do not downgrade a confirmed high-impact issue because it was found statically. Scanner priorities such as `REVIEW_FIRST` and `LEAD` control investigation order only; never map them directly to P0-P3.
 
 ## Bundled Scanners
 
@@ -81,9 +81,9 @@ python3 "$skill_dir/scripts/scan_terms.py" \
 
 ## Completion
 
-- **Full audit**: report confirmed/likely release findings, verification performed, and meaningful untested gaps.
+- **Full audit**: use [references/report-template.md](references/report-template.md), report confirmed/likely release findings, verification performed, and meaningful untested gaps. Always show P0 and P1, even when one is empty; include P2 or P3 only when findings exist.
 - **Targeted diagnosis**: identify the root cause or state exactly which missing evidence prevents confirmation; do not pad the answer with unrelated findings.
 - **Copy audit**: report only user-visible or release-metadata issues after manually confirming scanner hits.
 - **Implementation**: complete the scoped edit and targeted validation, then stop.
 
-Use [references/report-template.md](references/report-template.md) when multiple findings need a consistent report. Omit empty severity sections.
+Use [references/report-template.md](references/report-template.md) when multiple findings need a consistent report. A targeted diagnosis may stay compact and does not need empty severity sections.
