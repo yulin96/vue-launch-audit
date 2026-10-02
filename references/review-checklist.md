@@ -24,6 +24,7 @@ Read this reference only for a general release-readiness review. Rank the releas
 - Check whether a new entity or response is merged into an old display object, allowing omitted fields to remain visible.
 - Check watchers, lifecycle hooks, guards, polling, and callbacks for duplicated requests, redirects, timers, or stale writes.
 - Confirm the callback-updated state is the same source read by the visible UI.
+- When custom navigation, subscriptions, or resource lifetimes are part of a critical flow, read [state-lifecycle-risks.md](state-lifecycle-risks.md). Check failed navigation before history mutation, repeated equal events, and cleanup timing without assuming every watcher or unmount hook is defective.
 
 ## 4. Failure and Production Paths
 
@@ -35,7 +36,7 @@ Read this reference only for a general release-readiness review. Rank the releas
 ## 5. Conditional Coverage
 
 - For mobile WebView or SDK-backed actions, read [sdk-mobile-risks.md](sdk-mobile-risks.md).
-- For heavy assets, canvas, 3D, or preload behavior, read [asset-performance-risks.md](asset-performance-risks.md).
+- For asset mappings, generated images, heavy assets, canvas, 3D, or preload behavior, read [asset-performance-risks.md](asset-performance-risks.md).
 - For visible copy, read [copy-audit.md](copy-audit.md).
 
 ## 6. Verification and Stop Condition
@@ -43,4 +44,5 @@ Read this reference only for a general release-readiness review. Rank the releas
 - Infer the package manager from `packageManager` and lockfiles, then use only scripts actually defined by the repository.
 - Prefer type-check, lint, targeted unit tests, and minimal script checks. A passing static check does not prove mobile SDKs, remote APIs, layout, or production configuration.
 - Do not run build, deploy, browser, E2E, or real API checks without explicit authorization.
+- When runtime evidence is needed but outside the authorized scope, report the exact gap and suggested check. Complete the allowed work without repeatedly seeking permission for an exception.
 - Stop after the ranked release surface has been traced, confirmed/likely findings are documented, and meaningful unverified gaps are named.

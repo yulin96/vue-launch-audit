@@ -1,0 +1,5 @@
+{
+  "name": "vue-control-scope-fixture",
+  "private": true,
+  "dependencies": { "vue": "^3.5.0" }
+}

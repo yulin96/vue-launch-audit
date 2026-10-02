@@ -19,7 +19,8 @@ Select the narrowest mode that satisfies the request. Do not run a full audit fo
 Read these references only when the project or reported flow needs them:
 
 - Mobile WebView, share, scan, payment, upload, print, or other callback-based SDK flow: [references/sdk-mobile-risks.md](references/sdk-mobile-risks.md).
-- 3D, canvas, video, large images, preload manifests, or resource-performance claims: [references/asset-performance-risks.md](references/asset-performance-risks.md).
+- Route history, repeated events, async races, or resource cleanup: [references/state-lifecycle-risks.md](references/state-lifecycle-risks.md).
+- Asset/configuration mappings, exported posters, 3D, canvas, video, preload manifests, or resource-performance claims: [references/asset-performance-risks.md](references/asset-performance-risks.md).
 - Reusable findings format: [references/report-template.md](references/report-template.md).
 
 ## Boundaries
@@ -34,11 +35,11 @@ Read these references only when the project or reported flow needs them:
 ## Adaptive Workflow
 
 1. **Confirm applicability and safety.** Verify Vue from `package.json` or source before using the workflow. Read package scripts, lockfile/package-manager metadata, and Vite plugins before running commands. If the project is not Vue, stop using this skill.
-2. **Define completion.** State the selected mode, in-scope flows, permitted verification, and what evidence would be sufficient. For a full audit, rank the release surface before reading leaf components. For a targeted diagnosis, start from the reported symptom.
+2. **Define completion.** State the selected mode, in-scope flows, permitted verification, and what evidence would be sufficient. Locate the exact named control, output artifact, or entry point; preserve requested ordering, mappings, and behavior. For a full audit, rank the release surface before reading leaf components. For a targeted diagnosis, start from the reported symptom.
 3. **Trace the smallest complete path.** Follow entry/configuration → route or action → request/SDK → state → visible UI → failure and retry. Inspect adjacent code only when it participates in that path.
 4. **Use scanners selectively.** Resolve bundled paths relative to this `SKILL.md`. Prefer JSON output and restrict large repositories with `--include-path`, `--changed-only`, or `--rule`. Review the source around every returned lead.
-5. **Verify proportionally.** Use the repository's actual package manager and scripts. Prefer type-check, lint, targeted unit tests, and minimal command-line checks. Do not assume `pnpm` or a script name without inspecting the repo.
-6. **Report calibrated results.** Separate impact severity from evidence state, list what was run, and state runtime or business gaps explicitly.
+5. **Verify proportionally.** Use the repository's actual package manager and scripts, including pre/post hooks and plugins that the chosen command invokes. Prefer type-check, lint, targeted unit tests, and minimal command-line checks. Do not assume `pnpm` or a script name without inspecting the repo. If existing lint debt blocks a check, compare the same command against the unchanged baseline; distinguish existing diagnostics from new failures.
+6. **Report calibrated results.** Separate impact severity from evidence state, list what was run, and state runtime or business gaps explicitly. For implementation, compare the final diff with every requested behavior and target. A passing check does not establish that the requested control or exported result was changed.
 
 ## Evidence Model
 
@@ -78,12 +79,13 @@ python3 "$skill_dir/scripts/scan_terms.py" \
 - `scan_vue_state_risks.py` finds stale-state and async-flow code shapes. Exit `1` means review leads were found, not that execution failed.
 - `scan_terms.py` finds configured wording patterns. Add `term-style-rules.json` only after confirming those conventions apply to the project.
 - Both scanners support `--include-path`, `--exclude-path`, `--changed-only`, `--format text|json`, and `--max-results`. The state scanner also supports repeated `--rule` filters.
+- These are text-pattern scanners, not semantic Vue analysis. No hits does not clear lifecycle, navigation, asset mappings, or device/export behavior; inspect those paths when they are in scope.
 
 ## Completion
 
 - **Full audit**: use [references/report-template.md](references/report-template.md), report confirmed/likely release findings, verification performed, and meaningful untested gaps. Always show P0 and P1, even when one is empty; include P2 or P3 only when findings exist.
 - **Targeted diagnosis**: identify the root cause or state exactly which missing evidence prevents confirmation; do not pad the answer with unrelated findings.
 - **Copy audit**: report only user-visible or release-metadata issues after manually confirming scanner hits.
-- **Implementation**: complete the scoped edit and targeted validation, then stop.
+- **Implementation**: complete the scoped edit, check requested behavior against the final diff, and run targeted validation, then stop. Report separately what changed, what checks prove, and what still needs runtime or device evidence.
 
 Use [references/report-template.md](references/report-template.md) when multiple findings need a consistent report. A targeted diagnosis may stay compact and does not need empty severity sections.

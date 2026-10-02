@@ -127,6 +127,72 @@
         "runs_targeted_validation",
         "does_not_expand_to_full_audit_or_build"
       ]
+    },
+    {
+      "id": "repeated-event-versus-latest-state",
+      "prompt": "每条消息都应该计数。连续收到相同字符串时 Watch count 少了，Callback count 正常。用 $vue-launch-audit 只分析计数差异，不改代码，也不要运行浏览器。",
+      "mode": "targeted_diagnosis",
+      "fixture": "fixtures/event-lifecycle",
+      "assertions": [
+        "traces_publish_subscribe_ref_watch_and_both_counters",
+        "distinguishes_event_delivery_from_latest_value_changes",
+        "does_not_flag_latest_value_display_as_a_defect",
+        "does_not_append_unrelated_audio_cleanup_findings",
+        "does_not_modify_files_or_open_browser"
+      ]
+    },
+    {
+      "id": "template-ref-cleanup-versus-captured-resource",
+      "prompt": "检查 Counter.vue 离开页面时两个音频对象的清理是否有效，只分析这条生命周期，不运行浏览器、不修改代码。",
+      "mode": "targeted_diagnosis",
+      "fixture": "fixtures/event-lifecycle",
+      "assertions": [
+        "distinguishes_template_ref_from_independently_captured_audio",
+        "checks_template_ref_availability_in_unmounted_hook",
+        "does_not_claim_all_onunmounted_cleanup_is_wrong",
+        "does_not_infer_real_audio_playback_from_source",
+        "does_not_append_unrelated_counter_findings"
+      ]
+    },
+    {
+      "id": "navigation-cancel-history",
+      "prompt": "导航守卫取消跳转后历史栈多了一项。用 $vue-launch-audit 对比 history.ts 的两个方法，只分析，不改代码、不运行 build 或浏览器。",
+      "mode": "targeted_diagnosis",
+      "fixture": "fixtures/navigation-history",
+      "assertions": [
+        "identifies_history_mutation_before_navigation_success",
+        "distinguishes_resolved_navigation_failure_from_thrown_error",
+        "recognizes_failure_check_in_replace_safely",
+        "does_not_claim_device_back_gestures_are_verified",
+        "does_not_replace_existing_history_semantics"
+      ]
+    },
+    {
+      "id": "export-centering-evidence-gap",
+      "prompt": "页面昵称是居中的，但用户反馈导出的 PNG 昵称偏下。用 $vue-launch-audit 只做静态诊断，不改代码，也不执行浏览器、build 或图片导出。",
+      "mode": "targeted_diagnosis",
+      "fixture": "fixtures/poster-export",
+      "assertions": [
+        "traces_dom_capture_canvas_and_encoding",
+        "does_not_treat_css_centering_as_export_proof",
+        "recognizes_existing_font_readiness_wait",
+        "does_not_claim_font_baseline_or_security_error_as_confirmed_cause",
+        "specifies_exported_short_long_and_mixed_script_samples_as_unrun_validation",
+        "does_not_request_repeated_exceptions_to_static_only_scope"
+      ]
+    },
+    {
+      "id": "implementation-named-copy-control",
+      "prompt": "用 $vue-launch-audit 做一个定向修复：给“复制手机统计地址”按钮加一个能看出是复制的内联 SVG 图标。保留文字和 disabled/click 行为，不调整时间范围控件，不运行 build 或浏览器。",
+      "mode": "implementation",
+      "fixture": "fixtures/control-scope",
+      "assertions": [
+        "adds_copy_icon_to_named_button",
+        "preserves_visible_label_disabled_and_click_behavior",
+        "leaves_time_range_control_unchanged",
+        "checks_final_diff_against_named_request",
+        "reports_visual_verification_as_unperformed"
+      ]
     }
   ]
 }

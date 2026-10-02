@@ -66,4 +66,7 @@ Use this format for a full audit or when multiple findings need a consistent rep
 - Lead with user impact and the evidence that supports it.
 - Do not call a cause confirmed when runtime or business evidence is still required.
 - Do not hide failed checks or imply that type-check/lint proves runtime behavior.
+- Name the affected trigger and existing test gap where useful. A passing suite can miss navigation cancellation, repeated events, lifecycle ordering, or export/device behavior.
+- Distinguish prior-record candidates from defects rechecked in the current code. Do not reopen a superseded requirement as a regression.
+- For implementation, report the requested behavior delivered, validation actually performed, and remaining gaps. Check the named control or artifact in the final diff before claiming completion; source changes, served output, exported images, and deployed behavior are separate evidence.
 - Keep file references precise and avoid reproducing secrets or long source excerpts.

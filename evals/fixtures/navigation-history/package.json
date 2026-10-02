@@ -1,0 +1,5 @@
+{
+  "name": "vue-navigation-history-fixture",
+  "private": true,
+  "dependencies": { "vue": "^3.5.0", "vue-router": "^4.5.0" }
+}
